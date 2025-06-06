@@ -37,12 +37,46 @@ const Index = () => {
           <div className="flex-1 overflow-auto">
             <main className="py-8 px-12">
               <h1 className="text-3xl font-bold text-white mb-8">
-                What would you like to create?
+                Sistema de Gestão da Igreja
               </h1>
               
-              <div className="grid grid-cols-2 gap-6 mb-12">
-                <CreationCard type="image" />
-                <CreationCard type="storytelling" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                <div className="bg-card rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                     onClick={() => window.location.href = '/members'}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <Video size={24} className="text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">Gestão de Membros</h3>
+                      <p className="text-sm text-muted-foreground">Cadastre e gerencie membros da igreja</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-card rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer opacity-50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-accent/10">
+                      <Paintbrush size={24} className="text-accent" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">Gestão Financeira</h3>
+                      <p className="text-sm text-muted-foreground">Em breve...</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-card rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer opacity-50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-secondary/10">
+                      <Grid size={24} className="text-secondary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">Comunicação</h3>
+                      <p className="text-sm text-muted-foreground">Em breve...</p>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <section className="mb-12">
