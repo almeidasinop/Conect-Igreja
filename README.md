@@ -1,69 +1,93 @@
-# Welcome to your Lovable project
+Gestor de Igrejas - Painel Administrativo
+Bem-vindo ao repositório do Gestor de Igrejas, uma aplicação web moderna desenhada para centralizar e simplificar a administração de igrejas.
 
-## Project info
+Este painel administrativo, construído com React, TypeScript e Supabase, oferece uma plataforma robusta para gerir todos os aspetos da comunidade, desde membros e finanças até à comunicação e eventos.
 
-**URL**: https://lovable.dev/projects/fafe259a-ff46-45f0-812e-1c598bf4b505
+✨ Funcionalidades Implementadas
+Atualmente, o sistema conta com os seguintes módulos totalmente funcionais:
 
-## How can I edit this code?
+Dashboard Principal: Uma visão geral e rápida das métricas mais importantes da igreja.
 
-There are several ways of editing your application.
+Gestão de Membros:
 
-**Use Lovable**
+Cadastro completo de membros com informações pessoais e eclesiásticas.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/fafe259a-ff46-45f0-812e-1c598bf4b505) and start prompting.
+Criação e gestão de Grupos e Ministérios.
 
-Changes made via Lovable will be committed automatically to this repo.
+Associação de membros a múltiplos grupos.
 
-**Use your preferred IDE**
+Geração automática de número de membro.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Gestão Financeira:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Registo de todas as transações (receitas e despesas).
 
-Follow these steps:
+Gestão de categorias financeiras.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Painel dinâmico com totais por período.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Relatórios visuais com gráficos e resumos por categoria.
 
-# Step 3: Install the necessary dependencies.
-npm i
+Anexo de links para comprovativos de despesas.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Comunicação e Eventos:
+
+Mural de Avisos para comunicados gerais.
+
+Agenda de Eventos com suporte para eventos recorrentes (semanal e mensal).
+
+Gestão de voluntários por evento, com criação de funções e escala de membros.
+
+Gestão de Conteúdo:
+
+Biblioteca central para devocionais (texto), vídeos (links do YouTube) e estudos (links de PDFs).
+
+🚀 Tecnologias Utilizadas
+Frontend: React com Vite
+
+Linguagem: TypeScript
+
+Backend & Base de Dados: Supabase (PostgreSQL)
+
+Estilização: Tailwind CSS
+
+Componentes UI: Shadcn/ui
+
+Gráficos: Recharts
+
+Gestão de Estado: Zustand
+
+⚙️ Como Executar o Projeto Localmente
+Para configurar e executar o projeto na sua máquina local, siga os passos abaixo.
+
+Pré-requisitos
+Node.js (versão 18 ou superior)
+
+npm ou yarn
+
+Git
+
+Passos de Instalação
+Clone o repositório:
+
+git clone https://github.com/seu-usuario/seu-repositorio.git
+cd seu-repositorio
+
+Instale as dependências:
+
+npm install
+
+Configure as Variáveis de Ambiente:
+
+Crie um ficheiro .env na raiz do projeto.
+
+Adicione as suas chaves do Supabase a este ficheiro:
+
+VITE_SUPABASE_URL=https://jgunaqwuqjlswvgaiwrv.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui
+
+Execute o servidor de desenvolvimento:
+
 npm run dev
-```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/fafe259a-ff46-45f0-812e-1c598bf4b505) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Abra http://localhost:5173 (ou a porta indicada no terminal) no seu navegador para ver a aplicação.
