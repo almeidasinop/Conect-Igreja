@@ -9,6 +9,242 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          id: number
+          title: string
+          content: string
+          author_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          title: string
+          content: string
+          author_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          title?: string
+          content?: string
+          author_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_author_id_fkey"
+            columns: ["author_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          id: number
+          title: string
+          description: string | null
+          start_time: string
+          end_time: string | null
+          location: string | null
+          is_all_day: boolean
+          recurrence_rule: string | null
+          author_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          title: string
+          description?: string | null
+          start_time: string
+          end_time?: string | null
+          location?: string | null
+          is_all_day?: boolean
+          recurrence_rule?: string | null
+          author_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          title?: string
+          description?: string | null
+          start_time?: string
+          end_time?: string | null
+          location?: string | null
+          is_all_day?: boolean
+          recurrence_rule?: string | null
+          author_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_author_id_fkey"
+            columns: ["author_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_roles: {
+        Row: {
+          id: number
+          event_id: number
+          role_name: string
+          required_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          event_id: number
+          role_name: string
+          required_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          event_id?: number
+          role_name?: string
+          required_count?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_roles_event_id_fkey"
+            columns: ["event_id"]
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_volunteers: {
+        Row: {
+          id: number
+          event_role_id: number
+          member_id: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          event_role_id: number
+          member_id: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          event_role_id?: number
+          member_id?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_volunteers_event_role_id_fkey"
+            columns: ["event_role_id"]
+            referencedRelation: "event_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_volunteers_member_id_fkey"
+            columns: ["member_id"]
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          id: number
+          name: string
+          description: string | null
+          type: "income" | "expense"
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          description?: string | null
+          type: "income" | "expense"
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          description?: string | null
+          type?: "income" | "expense"
+          created_at?: string
+        }
+        Relationships: []
+      }
+      group_types: {
+        Row: {
+          id: number
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          id: number
+          date: string
+          amount: number
+          description: string | null
+          type: "income" | "expense"
+          category_id: number | null
+          member_id: string | null
+          created_at: string
+          receipt_url: string | null
+        }
+        Insert: {
+          id?: number
+          date?: string
+          amount: number
+          description?: string | null
+          type: "income" | "expense"
+          category_id?: number | null
+          member_id?: string | null
+          created_at?: string
+          receipt_url?: string | null
+        }
+        Update: {
+          id?: number
+          date?: string
+          amount?: number
+          description?: string | null
+          type?: "income" | "expense"
+          category_id?: number | null
+          member_id?: string | null
+          created_at?: string
+          receipt_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_member_id_fkey"
+            columns: ["member_id"]
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           created_at: string
@@ -170,8 +406,7 @@ export type Database = {
           phone: string | null
           state: string | null
           updated_at: string
-          user_id: string
-          zip_code: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -185,7 +420,7 @@ export type Database = {
           phone?: string | null
           state?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -200,7 +435,7 @@ export type Database = {
           phone?: string | null
           state?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           zip_code?: string | null
         }
         Relationships: []

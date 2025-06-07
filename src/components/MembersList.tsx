@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Edit, Trash2, Phone, Mail, MapPin, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,22 +6,29 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MembersListProps {
   searchTerm: string;
+  onEdit: (member: any) => void;
 }
 
-export const MembersList = ({ searchTerm }: MembersListProps) => {
+export const MembersList = ({ searchTerm, onEdit }: MembersListProps) => {
   const { toast } = useToast();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("members")
         .select(`
-          *,
+          id,
+          member_number,
+          status,
+          conversion_date,
+          baptism_date,
           profiles (*)
         `)
         .order("created_at", { ascending: false });
@@ -38,12 +45,12 @@ export const MembersList = ({ searchTerm }: MembersListProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchMembers();
-  }, []);
-
+  }, [fetchMembers]);
+  
   const filteredMembers = members.filter(member =>
     member.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -100,13 +107,13 @@ export const MembersList = ({ searchTerm }: MembersListProps) => {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i}>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-muted rounded-full"></div>
+                <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-muted rounded w-1/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/3"></div>
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-3 w-1/3" />
                 </div>
               </div>
             </CardContent>
@@ -192,11 +199,11 @@ export const MembersList = ({ searchTerm }: MembersListProps) => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => onEdit(member)}>
                   <Edit size={16} />
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="destructive" 
                   size="sm"
                   onClick={() => deleteMember(member.id)}
                 >

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { MainLayout } from "./components/MainLayout";
 import Index from "./pages/Index";
 import Members from "./pages/Members";
 import Financial from "./pages/Financial";
@@ -20,13 +21,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/members" element={<Members />} />
-          <Route path="/financial" element={<Financial />} />
-          <Route path="/communication" element={<Communication />} />
-          <Route path="/content" element={<Content />} />
-          <Route path="/admin" element={<Admin />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/members" element={<Members />} />
+            <Route path="/financial" element={<Financial />} />
+            <Route path="/communication" element={<Communication />} />
+            <Route path="/content" element={<Content />} />
+            <Route path="/admin" element={<Admin />} />
+          </Route>
+          {/* A rota NotFound fica fora do layout principal */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -34,4 +37,5 @@ const App = () => (
   </QueryClientProvider>
 );
 
+// CORREÇÃO: Adicionada a linha de exportação em falta.
 export default App;

@@ -11,13 +11,31 @@ import { GroupsManagement } from "@/components/GroupsManagement";
 const Members = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showMemberForm, setShowMemberForm] = useState(false);
+  const [editingMember, setEditingMember] = useState<any | null>(null);
+  // CORREÇÃO: Adicionado um estado de 'key' para forçar o formulário a recarregar
+  const [formKey, setFormKey] = useState(Date.now());
+
+  const handleEditMember = (member: any) => {
+    setEditingMember(member);
+    setFormKey(Date.now()); // Muda a key para um novo valor único
+    setShowMemberForm(true);
+  };
+  
+  const handleNewMember = () => {
+    setEditingMember(null);
+    setFormKey(Date.now()); // Muda a key para forçar a recriação com estado limpo
+    setShowMemberForm(true);
+  }
+
+  const closeForm = () => {
+    setShowMemberForm(false);
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+       <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-3xl font-bold text-foreground">
               Gestão de Membros
             </h1>
             <p className="text-muted-foreground">
@@ -25,7 +43,7 @@ const Members = () => {
             </p>
           </div>
           <Button
-            onClick={() => setShowMemberForm(true)}
+            onClick={handleNewMember}
             className="flex items-center gap-2"
           >
             <Plus size={20} />
@@ -64,7 +82,7 @@ const Members = () => {
                     Filtros
                   </Button>
                 </div>
-                <MembersList searchTerm={searchTerm} />
+                <MembersList searchTerm={searchTerm} onEdit={handleEditMember} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -89,14 +107,14 @@ const Members = () => {
 
         {showMemberForm && (
           <MemberForm
-            onClose={() => setShowMemberForm(false)}
+            key={formKey} // CORREÇÃO: A 'key' é passada para o formulário
+            member={editingMember}
+            onClose={closeForm}
             onSave={() => {
-              setShowMemberForm(false);
-              // Refresh list will be handled by the form component
+              closeForm();
             }}
           />
         )}
-      </div>
     </div>
   );
 };
