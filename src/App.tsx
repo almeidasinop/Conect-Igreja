@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import { MainLayout } from "./components/MainLayout";
+import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Members from "./pages/Members";
 import Financial from "./pages/Financial";
@@ -20,22 +22,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/financial" element={<Financial />} />
-            <Route path="/communication" element={<Communication />} />
-            <Route path="/content" element={<Content />} />
-            <Route path="/admin" element={<Admin />} />
-          </Route>
-          {/* A rota NotFound fica fora do layout principal */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/members" element={<Members />} />
+              <Route path="/financial" element={<Financial />} />
+              <Route path="/communication" element={<Communication />} />
+              <Route path="/content" element={<Content />} />
+              <Route path="/admin" element={<Admin />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
 
-// CORREÇÃO: Adicionada a linha de exportação em falta.
 export default App;
