@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { PermissionsProvider } from "./contexts/PermissionsContext"; // Importar o novo Provider
 import { MainLayout } from "./components/MainLayout";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
@@ -23,20 +24,20 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/members" element={<Members />} />
-              <Route path="/financial" element={<Financial />} />
-              <Route path="/communication" element={<Communication />} />
-              <Route path="/content" element={<Content />} />
-              <Route path="/admin" element={<Admin />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <PermissionsProvider> {/* Envolve as rotas com o provider de permissões */}
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/members" element={<Members />} />
+                <Route path="/financial" element={<Financial />} />
+                <Route path="/communication" element={<Communication />} />
+                <Route path="/content" element={<Content />} />
+                <Route path="/admin" element={<Admin />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PermissionsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
