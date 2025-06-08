@@ -17,20 +17,17 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePermissions } from '@/contexts/PermissionsContext';
-import { Skeleton } from './ui/skeleton';
 
-// Atualizado para incluir a permissão necessária para cada item
 const navItems = [
-  { href: "/", label: "Início", icon: Home, permission: 'dashboard.view' },
-  { href: "/members", label: "Membros", icon: Users, permission: 'members.view' },
-  { href: "/financial", label: "Financeiro", icon: DollarSign, permission: 'financial.view' },
-  { href: "/communication", label: "Comunicação", icon: MessageSquare, permission: 'communication.view' },
-  { href: "/content", label: "Conteúdo", icon: BookOpen, permission: 'content.view' },
+  { href: "/", label: "Início", icon: Home },
+  { href: "/members", label: "Membros", icon: Users },
+  { href: "/financial", label: "Financeiro", icon: DollarSign },
+  { href: "/communication", label: "Comunicação", icon: MessageSquare },
+  { href: "/content", label: "Conteúdo", icon: BookOpen },
 ];
 
 const adminNavItems = [
-    { href: "/admin", label: "Admin", icon: Settings, permission: 'admin.users.manage' },
+    { href: "/admin", label: "Admin", icon: Settings },
 ]
 
 // Componente reutilizável para cada item da barra lateral, garantindo consistência
@@ -39,37 +36,34 @@ const SidebarItem = ({ item, isCollapsed, onClick }: {
   isCollapsed: boolean,
   onClick?: () => void,
 }) => {
-    
+    // Definindo as classes base para os itens do menu
+    const baseClasses = "flex items-center gap-4 rounded-lg px-3 py-2 text-neutral-300 transition-all hover:text-white hover:bg-[#404040] font-medium cursor-pointer";
+    const collapsedClasses = isCollapsed && "justify-center";
+
+    // O conteúdo visual do item
     const content = (
-        <>
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={onClick}
+            onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }}
+        >
             <item.icon className="h-5 w-5 flex-shrink-0" />
             <span className={cn("truncate", isCollapsed && "hidden")}>{item.label}</span>
-        </>
-    );
-
-    const itemClasses = (isActive = false) => cn(
-        "flex items-center gap-4 rounded-lg px-3 py-2 text-neutral-300 transition-all hover:text-white hover:bg-[#404040] font-medium",
-        isActive && "bg-[#404040] text-white",
-        isCollapsed && "justify-center"
+        </div>
     );
 
     return (
         <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
                 {item.href ? (
-                    <NavLink to={item.href} className={({isActive}) => itemClasses(isActive)}>
-                        {content}
+                    // Se for um link de navegação
+                    <NavLink to={item.href}>
+                        {({isActive}) => React.cloneElement(content, {className: cn(baseClasses, collapsedClasses, isActive && "bg-[#404040] text-white")})}
                     </NavLink>
                 ) : (
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={onClick}
-                        onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }}
-                        className={cn(itemClasses(), "cursor-pointer")}
-                    >
-                        {content}
-                    </div>
+                    // Se for um botão de ação (como Sair)
+                     React.cloneElement(content, {className: cn(baseClasses, collapsedClasses)})
                 )}
             </TooltipTrigger>
             {isCollapsed && (
@@ -85,22 +79,12 @@ const SidebarItem = ({ item, isCollapsed, onClick }: {
 export const Sidebar = () => {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { signOut, user } = useAuth();
-  const { hasPermission, loading: permissionsLoading, profileRole } = usePermissions();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
-
-  const renderNavSkeletons = () => (
-    <div className="space-y-2 p-2">
-        <Skeleton className="h-10 w-full bg-neutral-700" />
-        <Skeleton className="h-10 w-full bg-neutral-700" />
-        <Skeleton className="h-10 w-full bg-neutral-700" />
-        <Skeleton className="h-10 w-full bg-neutral-700" />
-    </div>
-  )
 
   return (
     <TooltipProvider>
@@ -118,11 +102,7 @@ export const Sidebar = () => {
             </div>
             
             <nav className="flex flex-col gap-1 p-2 flex-1">
-                {permissionsLoading ? renderNavSkeletons() : (
-                    navItems.map((item) => 
-                        hasPermission(item.permission) && <SidebarItem key={item.href} item={item} isCollapsed={isCollapsed} />
-                    )
-                )}
+                {navItems.map((item) => <SidebarItem key={item.href} item={item} isCollapsed={isCollapsed} />)}
             </nav>
 
             <div className="mt-auto p-2 border-t border-neutral-800">
@@ -132,15 +112,11 @@ export const Sidebar = () => {
                     </div>
                     <div className={cn("flex flex-col", isCollapsed && "hidden")}>
                         <span className="text-sm font-semibold truncate">{user?.email}</span>
-                        <span className="text-xs text-neutral-400 capitalize">{profileRole || 'Carregando...'}</span>
+                        <span className="text-xs text-neutral-400">Admin</span>
                     </div>
                 </div>
 
-                {permissionsLoading ? <Skeleton className="h-10 w-full bg-neutral-700"/> : (
-                    adminNavItems.map((item) =>
-                        hasPermission(item.permission) && <SidebarItem key={item.href} item={item} isCollapsed={isCollapsed} />
-                    )
-                )}
+                {adminNavItems.map((item) => <SidebarItem key={item.href} item={item} isCollapsed={isCollapsed} />)}
                 
                 <SidebarItem item={{ label: 'Sair', icon: LogOut }} isCollapsed={isCollapsed} onClick={handleSignOut} />
 
