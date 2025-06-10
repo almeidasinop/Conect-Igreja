@@ -6,6 +6,7 @@ interface PermissionsContextType {
   hasPermission: (permission: string) => boolean;
   loading: boolean;
   isAdmin: boolean;
+  profileRole: string | null;
 }
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
@@ -14,27 +15,40 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profileRole, setProfileRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPermissions = useCallback(async (userId: string) => {
     setLoading(true);
     try {
-      // 1. Obtém o papel do utilizador a partir do seu perfil
+      // 1. Obtém o papel (role) do utilizador a partir do seu perfil
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('user_id', userId)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // Se o perfil não for encontrado, trata como um membro padrão sem permissões
+        if (profileError.code === 'PGRST116') {
+            setProfileRole('member');
+            setIsAdmin(false);
+            setPermissions(new Set());
+            return;
+        }
+        throw profileError;
+      }
 
       const userRole = profile?.role || 'member';
+      setProfileRole(userRole);
 
+      // 2. O papel 'admin' tem acesso a tudo por defeito
       if (userRole === 'admin') {
         setIsAdmin(true);
+        setPermissions(new Set()); // O admin não precisa da lista, ele passa em todas as verificações
       } else {
         setIsAdmin(false);
-        // 2. Obtém todas as permissões ativas para aquele papel
+        // 3. Para outros papéis, busca as permissões específicas do banco de dados
         const { data: rolePermissions, error: permissionsError } = await supabase
           .from('role_permissions')
           .select('permission')
@@ -47,7 +61,8 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Erro ao buscar permissões:", error);
-      setPermissions(new Set()); // Limpa as permissões em caso de erro
+      setPermissions(new Set());
+      setIsAdmin(false);
     } finally {
       setLoading(false);
     }
@@ -57,16 +72,17 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
     if (!authLoading && user) {
       fetchPermissions(user.id);
     } else if (!authLoading && !user) {
-      // Se o utilizador deslogar, limpa as permissões
+      // Se o utilizador deslogar, limpa as permissões e o estado
       setPermissions(new Set());
       setIsAdmin(false);
+      setProfileRole(null);
       setLoading(false);
     }
   }, [user, authLoading, fetchPermissions]);
 
-  // Função que verifica se o utilizador tem uma permissão específica
+  // Função que outros componentes irão usar para verificar uma permissão específica
   const hasPermission = (permission: string): boolean => {
-    if (isAdmin) return true; // Admins podem fazer tudo
+    if (isAdmin) return true; // Admins sempre têm permissão
     return permissions.has(permission);
   };
 
@@ -74,12 +90,13 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
     hasPermission,
     loading: authLoading || loading,
     isAdmin,
+    profileRole,
   };
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 };
 
-// Hook personalizado para usar o contexto facilmente
+// Hook personalizado para facilitar o uso do contexto
 export const usePermissions = () => {
   const context = useContext(PermissionsContext);
   if (context === undefined) {
