@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos adicionais para uma melhor aparência em PWA */
+html {
+  -webkit-tap-highlight-color: transparent; /* Remove o destaque azul ao tocar em links */
+}
+
+html, body, #root {
+  height: 100%;
+  overscroll-behavior-y: none; /* Impede o "puxar para atualizar" em PWAs */
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  background-color: #101010; /* Fundo escuro principal */
+  color: #e4e4e7; /* Cor de texto padrão (cinza claro) */
+}
+
+/* Esconde a barra de scroll nos carrosséis */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* For IE, Edge and Firefox */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
