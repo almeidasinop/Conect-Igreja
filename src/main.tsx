@@ -1,5 +1,10 @@
-import { createRoot } from 'react-dom/client'
-import App from './App-pwa.tsx'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import MasterApp from './MasterApp' // O nosso novo componente "porteiro"
 import './index.css'
 
-createRoot(document.getElementById("root")!).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <MasterApp />
+  </React.StrictMode>,
+)
