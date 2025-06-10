@@ -119,7 +119,7 @@ export const HomePage = () => {
         <div className="pt-6 space-y-10">
             {/* Header com Carrossel */}
             <header className="h-48 mx-4 bg-neutral-800 rounded-2xl p-4 flex flex-col justify-end shadow-2xl relative overflow-hidden">
-                <img src="https://placehold.co/600x400/101010/FFF?text=Banner" alt="Banner principal" className="absolute top-0 left-0 w-full h-full object-cover opacity-30" />
+                <img src="https://i.imgur.com/oI0GTcD.png" alt="Banner principal" className="absolute top-0 left-0 w-full h-full object-cover opacity-30" />
                 <div className="relative z-10">
                     <h1 className="text-3xl font-bold">Ministério da Fé</h1>
                     <p className="text-sm text-neutral-300">Sinop</p>
