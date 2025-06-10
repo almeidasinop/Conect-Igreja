@@ -217,23 +217,22 @@ export const BiblePage = () => {
           verses.map(verse => (
             <div key={verse.id} className="text-neutral-100 leading-relaxed text-lg space-y-2">
               {verse.content
-  .split(/\[(\d+)\]/g) // separa onde tiver [1], [2], etc.
-  .filter(v => v.trim() !== '')
-  .map((chunk, idx) => {
-    if (/^\d+$/.test(chunk)) {
-      return (
-        <span key={idx} className="block font-bold text-primary mt-4">
-          [{chunk}]
-        </span>
-      );
-    }
-    return (
-      <p key={idx} className="text-neutral-100 leading-relaxed text-lg">
-        {chunk.trim()}
-      </p>
-    );
-  })}
-
+                .split(/\[(\d+)\]/g) // separa onde tiver [1], [2], etc.
+                .filter(v => v.trim() !== '')
+                .map((chunk, idx) => {
+                    if (/^\d+$/.test(chunk)) {
+                    return (
+                        <span key={idx} className="block font-bold text-primary mt-4">
+                        [{chunk}]
+                        </span>
+                    );
+                    }
+                    return (
+                    <p key={idx} className="text-neutral-100 leading-relaxed text-lg">
+                        {chunk.trim()}
+                    </p>
+                    );
+                })}
             </div>
           ))
         )}
