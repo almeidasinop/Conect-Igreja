@@ -5,6 +5,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 
+
+
 // --- Subcomponentes Visuais (sem alterações) ---
 const QuickAction = ({ icon: Icon, label, secondaryLabel }: { icon: React.ElementType, label: string, secondaryLabel?: string }) => (
     <div className="flex flex-col items-center gap-2 text-white text-center">
