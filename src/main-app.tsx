@@ -1,10 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './app/App.tsx' // Aponta para o App dentro da nova pasta
-import './app/index.css'   // Aponta para o CSS dentro da nova pasta
+// CORREÇÃO: Aponta para o ficheiro AppPwa.tsx na raiz de src
+import AppPwa from './App-pwa.tsx'
+// CORREÇÃO: Aponta para o ficheiro index.css na raiz de src
+import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AppPwa />
   </React.StrictMode>,
 )

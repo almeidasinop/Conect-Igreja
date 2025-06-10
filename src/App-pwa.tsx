@@ -2,9 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { PermissionsProvider } from "./contexts/PermissionsContext"; // Importar o novo Provider
+import { PermissionsProvider } from "./contexts/PermissionsContext";
 import { MainLayout } from "./components/MainLayout";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
@@ -24,7 +24,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <PermissionsProvider> {/* Envolve as rotas com o provider de permissões */}
+          <PermissionsProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<MainLayout />}>
@@ -35,6 +35,7 @@ const App = () => (
                 <Route path="/content" element={<Content />} />
                 <Route path="/admin" element={<Admin />} />
               </Route>
+              <Route path="/pwa.html" element={<Navigate to="/" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </PermissionsProvider>
