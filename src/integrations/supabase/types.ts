@@ -16,6 +16,7 @@ export type Database = {
           content: string
           author_id: string | null
           created_at: string
+          image_url: string | null
         }
         Insert: {
           id?: number
@@ -23,6 +24,7 @@ export type Database = {
           content: string
           author_id?: string | null
           created_at?: string
+          image_url?: string | null
         }
         Update: {
           id?: number
@@ -30,6 +32,7 @@ export type Database = {
           content?: string
           author_id?: string | null
           created_at?: string
+          image_url?: string | null
         }
         Relationships: [
           {
@@ -47,6 +50,7 @@ export type Database = {
           description: string | null
           start_time: string
           end_time: string | null
+          image_url: string | null
           location: string | null
           is_all_day: boolean
           recurrence_rule: string | null
@@ -60,6 +64,7 @@ export type Database = {
           start_time: string
           end_time?: string | null
           location?: string | null
+          image_url?: string | null
           is_all_day?: boolean
           recurrence_rule?: string | null
           author_id?: string | null
@@ -72,6 +77,7 @@ export type Database = {
           start_time?: string
           end_time?: string | null
           location?: string | null
+          image_url?: string | null
           is_all_day?: boolean
           recurrence_rule?: string | null
           author_id?: string | null

@@ -1,93 +1,110 @@
-Gestor de Igrejas - Painel Administrativo
-Bem-vindo ao repositório do Gestor de Igrejas, uma aplicação web moderna desenhada para centralizar e simplificar a administração de igrejas.
+Gestor de Igrejas - Painel Admin & PWA
+Este repositório contém o código-fonte de um sistema completo de gestão para igrejas, composto por duas aplicações principais: um painel administrativo robusto e um Progressive Web App (PWA) moderno para os membros.
 
-Este painel administrativo, construído com React, TypeScript e Supabase, oferece uma plataforma robusta para gerir todos os aspetos da comunidade, desde membros e finanças até à comunicação e eventos.
+Funcionalidades Principais
+Painel de Administração
+Gestão de Membros: Cadastro, edição e visualização de todos os membros da igreja.
 
-✨ Funcionalidades Implementadas
-Atualmente, o sistema conta com os seguintes módulos totalmente funcionais:
+Gestão de Grupos: Criação e administração de pequenos grupos ou células.
 
-Dashboard Principal: Uma visão geral e rápida das métricas mais importantes da igreja.
+Controle Financeiro: Lançamento de dízimos, ofertas e despesas.
 
-Gestão de Membros:
+Comunicação e Engajamento:
 
-Cadastro completo de membros com informações pessoais e eclesiásticas.
+Mural de Avisos: Crie, edite e exclua anúncios com suporte a imagens de capa.
 
-Criação e gestão de Grupos e Ministérios.
+Gestão de Eventos: Agende e administre eventos, incluindo a capacidade de fazer upload de imagens de fundo personalizadas.
 
-Associação de membros a múltiplos grupos.
+Gestão de Conteúdo: Administração de estudos, vídeos e outros materiais.
 
-Geração automática de número de membro.
+Controle de Acessos: Sistema de permissões baseado em papéis de usuário.
 
-Gestão Financeira:
+Progressive Web App (PWA) para Membros
+Home Page Dinâmica: Exibe as últimas notícias, os próximos eventos e os vídeos mais recentes do canal do YouTube da igreja.
 
-Registo de todas as transações (receitas e despesas).
+Notícias e Eventos com Imagem: Visualização imersiva de notícias e eventos com as imagens de capa e de fundo definidas no painel administrativo.
 
-Gestão de categorias financeiras.
+Navegação Detalhada: Páginas dedicadas para listar todas as notícias e para visualizar os detalhes completos de cada uma.
 
-Painel dinâmico com totais por período.
+Bíblia Online: Ferramenta de leitura e estudo da Bíblia diretamente no app.
 
-Relatórios visuais com gráficos e resumos por categoria.
+Vídeos do YouTube: Seção que exibe automaticamente os últimos vídeos publicados no canal da igreja.
 
-Anexo de links para comprovativos de despesas.
+Design Responsivo: Totalmente funcional e otimizado para celulares, tablets e desktops.
 
-Comunicação e Eventos:
+Tecnologias Utilizadas
+Frontend: React, TypeScript, Vite
 
-Mural de Avisos para comunicados gerais.
+Estilização: Tailwind CSS, shadcn/ui
 
-Agenda de Eventos com suporte para eventos recorrentes (semanal e mensal).
+Backend & Banco de Dados: Supabase (PostgreSQL, Storage, Auth)
 
-Gestão de voluntários por evento, com criação de funções e escala de membros.
+Gestão de Estado: Zustand & React Query
 
-Gestão de Conteúdo:
+Roteamento: React Router
 
-Biblioteca central para devocionais (texto), vídeos (links do YouTube) e estudos (links de PDFs).
+Integrações: YouTube Data API v3
 
-🚀 Tecnologias Utilizadas
-Frontend: React com Vite
+Começando
+Para rodar este projeto localmente, siga os passos abaixo.
 
-Linguagem: TypeScript
-
-Backend & Base de Dados: Supabase (PostgreSQL)
-
-Estilização: Tailwind CSS
-
-Componentes UI: Shadcn/ui
-
-Gráficos: Recharts
-
-Gestão de Estado: Zustand
-
-⚙️ Como Executar o Projeto Localmente
-Para configurar e executar o projeto na sua máquina local, siga os passos abaixo.
-
-Pré-requisitos
+1. Pré-requisitos
 Node.js (versão 18 ou superior)
 
 npm ou yarn
 
-Git
+Uma conta no Supabase
 
-Passos de Instalação
-Clone o repositório:
+Uma Conta Google para a API do YouTube
 
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
+2. Configuração do Projeto
+# Clone o repositório
+git clone <URL_DO_SEU_REPOSITORIO>
 
-Instale as dependências:
+# Navegue até a pasta do projeto
+cd <NOME_DA_PASTA>
 
+# Instale as dependências
 npm install
 
-Configure as Variáveis de Ambiente:
+3. Configuração do Supabase
+Crie um Projeto: Vá até o painel do Supabase e crie um novo projeto.
 
-Crie um ficheiro .env na raiz do projeto.
+Variáveis de Ambiente: No seu código, localize o arquivo src/integrations/supabase/client.ts e insira a URL e a anon key do seu projeto.
 
-Adicione as suas chaves do Supabase a este ficheiro:
+Execute os Scripts SQL: Vá até o SQL Editor no painel do Supabase e execute os scripts abaixo para criar as tabelas, funções e políticas de segurança necessárias.
 
-VITE_SUPABASE_URL=https://jgunaqwuqjlswvgaiwrv.supabase.co
-VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui
+Script para criar as tabelas (events, announcements, etc.).
 
-Execute o servidor de desenvolvimento:
+Script para criar a função handle_new_user e o gatilho on_auth_user_created (para sincronizar usuários e perfis).
 
+Scripts para criar as políticas de segurança (RLS) para os buckets event-images e announcement-images.
+
+4. Configuração da API do YouTube
+Crie uma Chave de API: Siga o guia Como Obter uma Chave de API do YouTube no Google Cloud Console.
+
+Adicione a Chave ao Código: Abra o arquivo src/pages/pwa/HomePage.tsx e substitua o placeholder COLE_SUA_CHAVE_DE_API_AQUI pela sua chave.
+
+5. Rodando a Aplicação
+# Inicie o servidor de desenvolvimento
 npm run dev
 
-Abra http://localhost:5173 (ou a porta indicada no terminal) no seu navegador para ver a aplicação.
+O Painel de Administração estará acessível em http://localhost:5173.
+
+O PWA estará acessível em http://localhost:5173/app.
+
+Estrutura do Projeto
+/
+├── public/              # Arquivos estáticos e service worker
+├── src/
+│   ├── components/      # Componentes React reutilizáveis
+│   │   ├── ui/          # Componentes base (shadcn/ui)
+│   │   └── pwa/         # Componentes específicos do PWA
+│   ├── contexts/        # Contextos React (Auth, Permissions)
+│   ├── integrations/    # Integrações com serviços externos (Supabase)
+│   ├── pages/           # Componentes que representam as páginas/rotas
+│   │   └── pwa/         # Páginas específicas do PWA
+│   ├── App.tsx          # Roteador do Painel Admin
+│   ├── App-pwa.tsx      # Roteador do PWA
+│   └── MasterApp.tsx    # Componente principal que seleciona entre Admin e PWA
+└── ...                  # Arquivos de configuração (vite, tailwind, etc.)
