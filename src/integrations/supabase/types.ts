@@ -123,6 +123,74 @@ export type Database = {
           },
         ]
       }
+      event_roles: {
+        Row: {
+          id: number
+          event_id: number
+          role_name: string
+          required_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          event_id: number
+          role_name: string
+          required_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          event_id?: number
+          role_name?: string
+          required_count?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_roles_event_id_fkey"
+            columns: ["event_id"]
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_volunteers: {
+        Row: {
+          id: number
+          event_role_id: number
+          member_id: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          event_role_id: number
+          member_id: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          event_role_id?: number
+          member_id?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_volunteers_event_role_id_fkey"
+            columns: ["event_role_id"]
+            referencedRelation: "event_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_volunteers_member_id_fkey"
+            columns: ["member_id"]
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_volunteers: {
         Row: {
           id: number
@@ -572,3 +640,7 @@ export const Constants = {
     Enums: {},
   },
 } as const
+export type EventRole = Database['public']['Tables']['event_roles']['Row'];
+export type EventVolunteer = Database['public']['Tables']['event_volunteers']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Member = Database['public']['Tables']['members']['Row'] & { profiles: Profile };

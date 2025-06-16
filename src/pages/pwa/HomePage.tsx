@@ -6,31 +6,19 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Calendar, MapPin, BookOpen, Plus, Heart, CalendarDays, ArrowRight, Youtube } from 'lucide-react';
 import { type Event, type Announcement } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONFIGURAÇÃO DO YOUTUBE ---
-// IMPORTANTE: Substitua a string abaixo pela sua própria Chave de API do YouTube.
-// Veja o guia no outro painel para aprender como conseguir a sua.
+// IMPORTANTE: Substitua pela sua Chave de API do YouTube.
 const YOUTUBE_API_KEY = 'AIzaSyAI6ElLWG73MlKLlQey48z6Di7xnm7IoII'; 
 // ID do canal do Ministério da Fé
 const YOUTUBE_CHANNEL_ID = 'UC2_epYhGE1zrwFY2dw69H6Q'; 
 
-// Tipo para os dados que recebemos da API do YouTube
 type YouTubeVideo = {
-  id: {
-    videoId: string;
-  };
-  snippet: {
-    title: string;
-    description: string;
-    thumbnails: {
-      high: {
-        url: string;
-      };
-    };
-  };
+  id: { videoId: string; };
+  snippet: { title: string; description: string; thumbnails: { high: { url: string; }; }; };
 };
 
-// Componente para Ações Rápidas
 const QuickActionButton = ({ icon: Icon, label, to }: { icon: React.ElementType, label: string, to: string }) => (
   <Link to={to} className="flex flex-col items-center gap-2 text-center">
     <div className="bg-gray-800/80 backdrop-blur-sm rounded-full h-16 w-16 flex items-center justify-center">
@@ -40,16 +28,22 @@ const QuickActionButton = ({ icon: Icon, label, to }: { icon: React.ElementType,
   </Link>
 );
 
-
 const HomePage = () => {
-  // Busca por eventos futuros
+  const { user } = useAuth();
+
+  // --- BUSCA ATUALIZADA: Eventos Visíveis ---
   const { data: events, isLoading: isLoadingEvents } = useQuery<Event[]>({
-    queryKey: ['future_events'],
+    queryKey: ['visible_future_events', user?.id], // A chave da query muda se o usuário logar/deslogar
     queryFn: async () => {
-      const now = new Date().toISOString();
-      const { data, error } = await supabase.from('events').select('*').gte('start_time', now).order('start_time', { ascending: true }).limit(3);
-      if (error) throw new Error(error.message);
-      return data || [];
+      // Chama a função PostgreSQL para obter apenas os eventos visíveis
+      const { data, error } = await supabase.rpc('get_visible_events');
+      
+      if (error) {
+        console.error("Error fetching visible events:", error);
+        throw new Error(error.message);
+      }
+      // Limita o resultado a 3 na home page (a função já filtra por data)
+      return (data || []).slice(0, 3);
     },
   });
 
@@ -63,13 +57,13 @@ const HomePage = () => {
     },
   });
 
-  // --- NOVA BUSCA: Vídeos do YouTube ---
+  // --- BUSCA: Vídeos do YouTube ---
   const { data: videos, isLoading: isLoadingVideos, error: videosError } = useQuery<YouTubeVideo[]>({
     queryKey: ['youtube_videos'],
     queryFn: async () => {
         if (YOUTUBE_API_KEY === 'COLE_SUA_CHAVE_DE_API_AQUI') {
             console.warn("Chave de API do YouTube não configurada. A busca de vídeos foi ignorada.");
-            return []; // Retorna um array vazio se a chave não foi configurada
+            return [];
         }
         const response = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=5&type=video`);
         if (!response.ok) {
@@ -78,10 +72,9 @@ const HomePage = () => {
         const data = await response.json();
         return data.items || [];
     },
-    staleTime: 1000 * 60 * 60, // Cache de 1 hora
+    staleTime: 1000 * 60 * 60,
   });
 
-  // Função para formatar a data e hora do evento
   const formatEventDateTime = (dateTimeString: string) => {
     return new Date(dateTimeString).toLocaleString('pt-BR', {
       weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
@@ -144,7 +137,6 @@ const HomePage = () => {
           ) : ( <p className="text-sm text-muted-foreground">Nenhum evento agendado no momento.</p> )}
         </section>
 
-        {/* --- Seção de Vídeos (Agora com dados do YouTube) --- */}
         <section>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl font-bold">Vídeos</h2>
@@ -177,6 +169,7 @@ const HomePage = () => {
           </div>
           <p className="text-sm text-muted-foreground">Nenhum estudo recente.</p>
         </section>
+
       </div>
     </div>
   );
