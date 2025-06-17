@@ -18,24 +18,42 @@ export default defineConfig({
         display: 'standalone',
         scope: '/',
         start_url: '/app',
+        // --- PERMISSÃO ADICIONADA ---
+        permissions: ["notifications"],
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'icons/web-app-manifest-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icons/web-app-manifest-512x512.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icons/web-app-manifest-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
           },
         ],
+        screenshots: [
+          {
+            src: 'icons/splash-screen.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Tela de Abertura do App Ministério da Fé'
+          },
+          {
+            src: 'icons/splash-screen.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Tela de Abertura do App Ministério da Fé'
+          }
+        ]
       },
     }),
   ],

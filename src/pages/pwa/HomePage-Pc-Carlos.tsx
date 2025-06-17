@@ -29,7 +29,8 @@ const QuickActionButton = ({ icon: Icon, label, to }: { icon: React.ElementType,
 );
 
 const HomePage = () => {
-  const { user } = useAuth();
+  // CORREÇÃO: Pegamos também o estado de carregamento da autenticação
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   // --- BUSCA ATUALIZADA: Eventos Visíveis ---
   const { data: events, isLoading: isLoadingEvents } = useQuery<Event[]>({
@@ -45,6 +46,8 @@ const HomePage = () => {
       // Limita o resultado a 3 na home page (a função já filtra por data)
       return (data || []).slice(0, 3);
     },
+    // CORREÇÃO: A busca só será executada QUANDO a verificação de auth terminar.
+    enabled: !isAuthLoading,
   });
 
   // Busca por anúncios
@@ -92,7 +95,7 @@ const HomePage = () => {
       </header>
 
       <div className="grid grid-cols-4 gap-4 px-4 -mt-16 relative z-20">
-         <QuickActionButton icon={BookOpen} label="Bíblia" to="/app/biblia" />
+         <QuickActionButton icon={BookOpen} label="Bíblia" to="/app/bible" />
          <QuickActionButton icon={Plus} label="Pedido de Oração" to="#" />
          <QuickActionButton icon={Heart} label="Envolva-se" to="#" />
          <QuickActionButton icon={CalendarDays} label="Horários" to="#" />
