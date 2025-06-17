@@ -26,17 +26,18 @@ export const PermissionsProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
-        // Se o perfil não for encontrado, trata como um membro padrão sem permissões
-        if (profileError.code === 'PGRST116') {
-            setProfileRole('member');
-            setIsAdmin(false);
-            setPermissions(new Set());
-            return;
-        }
         throw profileError;
+      }
+
+      if (!profile) {
+        // Se não existir perfil para este utilizador, assume papel 'member' sem permissões
+        setProfileRole('member');
+        setIsAdmin(false);
+        setPermissions(new Set());
+        return;
       }
 
       const userRole = profile?.role || 'member';
