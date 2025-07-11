@@ -33,19 +33,49 @@ const HomePage = () => {
 
   // --- BUSCA ATUALIZADA: Eventos Visíveis ---
   const { data: events, isLoading: isLoadingEvents } = useQuery<Event[]>({
-    queryKey: ['visible_future_events', user?.id], // A chave da query muda se o usuário logar/deslogar
+    queryKey: ['visible_future_events', user?.id],
     queryFn: async () => {
+      // Obtenha o ID do usuário e os IDs dos grupos (você precisará implementar isso)
+      const userId = user?.id || null; // Assumindo que 'user' vem do seu contexto de autenticação
+      const userGroupIds = await getUserGroupIds(userId); // Função para obter IDs dos grupos do usuário
+
       // Chama a função PostgreSQL para obter apenas os eventos visíveis
-      const { data, error } = await supabase.rpc('get_visible_events');
-      
+      const { data, error } = await supabase.rpc('get_visible_events', {
+        user_id: userId, // Passe o ID do usuário
+        user_group_ids: userGroupIds, // Passe os IDs dos grupos
+      });
+
       if (error) {
         console.error("Error fetching visible events:", error);
         throw new Error(error.message);
       }
-      // Limita o resultado a 3 na home page (a função já filtra por data)
+      // Limita o resultado a 3 na home page (a função AGORA filtra por visibilidade e grupos,
+      // você pode adicionar filtro por data na função SQL também)
       return (data || []).slice(0, 3);
     },
+    // CORREÇÃO: A busca só será executada QUANDO a verificação de auth terminar (se aplicável)
+    // Se user?.id é suficiente para determinar se o usuário está logado, a queryKey já lida com isso.
+    // Se você tiver um estado isLoading de autenticação separado, pode usar 'enabled' aqui.
+    // enabled: !isAuthLoading, // Exemplo: descomente se tiver um isAuthLoading
   });
+
+// Exemplo de função para obter IDs dos grupos do usuário (você precisará implementar a lógica real)
+async function getUserGroupIds(userId: string | null): Promise<string[]> {
+  if (!userId) {
+    return []; // Retorna array vazio se usuário não estiver logado
+  }
+  // Implemente a lógica para buscar os IDs dos grupos do usuário logado
+  // Isso provavelmente envolverá outra query ao Supabase para uma tabela de associação de usuários e grupos
+  const { data, error } = await supabase.from('user_groups').select('group_id').eq('user_id', userId);
+
+  if (error) {
+    console.error('Erro ao buscar grupos do usuário:', error);
+    return [];
+  }
+
+  return data?.map(item => item.group_id) || [];
+}
+
 
   // Busca por anúncios
   const { data: announcements, isLoading: isLoadingAnnouncements } = useQuery<Announcement[]>({

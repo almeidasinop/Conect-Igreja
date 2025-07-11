@@ -17,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth(); // Usar o estado de autenticação
 
-  // CORREÇÃO: Adicionado useEffect para redirecionar se já estiver logado
+  // Redireciona se o usuário já estiver logado
   useEffect(() => {
     if (!authLoading && session) {
       navigate('/');
@@ -33,29 +33,28 @@ const Login = () => {
         password,
       });
       if (error) throw error;
-      // Após o sucesso, o onAuthStateChange no AuthContext irá atualizar a sessão,
-      // e o useEffect acima irá tratar do redirecionamento.
+
       toast({
-        title: "Login bem-sucedido!",
-        description: "A redirecionar para o painel...",
+        title: "Login realizado com sucesso!",
+        description: "Redirecionando para o painel...",
       });
     } catch (error: any) {
       toast({
-        title: "Erro no Login",
-        description: error.message || "Verifique o seu email e senha.",
+        title: "Erro no login",
+        description: error.message || "Verifique seu e-mail e senha.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  
-  // Se ainda estiver a verificar a sessão ou se já houver uma sessão, não mostra o formulário
+
+  // Se ainda estiver verificando a sessão ou se já houver uma sessão, não mostra o formulário
   if (authLoading || session) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
-            <p>A carregar...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <p>Carregando...</p>
+      </div>
     );
   }
 
@@ -66,17 +65,17 @@ const Login = () => {
           <Church className="mx-auto h-10 w-10 mb-4 text-primary" />
           <CardTitle className="text-2xl">Gestor de Igrejas</CardTitle>
           <CardDescription>
-            Insira as suas credenciais para aceder ao painel.
+            Insira suas credenciais para acessar o painel.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="seu@email.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -93,7 +92,7 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "A entrar..." : "Entrar"}
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
         </CardContent>
