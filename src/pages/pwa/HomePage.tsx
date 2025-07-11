@@ -137,13 +137,15 @@ async function getUserGroupIds(userId: string | null): Promise<string[]> {
           {isLoadingAnnouncements ? (
             <div className="space-y-4"><Skeleton className="h-28 w-full rounded-lg" /></div>
           ) : announcements && announcements.length > 0 ? (
-            <div className="space-y-4">
-              {announcements.map((announcement) => (
+            <div className="flex space-x-4 overflow-x-auto pb-4">
+               {announcements.map((announcement) => (
+                <div key={announcement.id} className="flex-shrink-0 w-80">
                 <Link key={announcement.id} to={`/app/announcement/${announcement.id}`}>
                   <Card className="relative overflow-hidden text-white bg-cover bg-center shadow-lg border-0 rounded-xl" style={{ backgroundImage: `linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.2)), url(${announcement.image_url || 'https://placehold.co/600x400/334155/ffffff?text=Notícia'})`, minHeight: '160px' }}>
                     <div className="p-4 flex flex-col justify-end h-full"><CardTitle className="text-lg font-bold drop-shadow-md">{announcement.title}</CardTitle><CardDescription className="text-gray-200 text-sm mt-1 line-clamp-2 drop-shadow-md">{announcement.content}</CardDescription></div>
                   </Card>
                 </Link>
+                </div>
               ))}
             </div>
           ) : ( <p className="text-sm text-muted-foreground">Nenhuma notícia recente.</p> )}
