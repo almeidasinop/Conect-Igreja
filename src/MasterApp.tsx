@@ -7,6 +7,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { PermissionsProvider } from "./contexts/PermissionsContext";
 import AppAdmin from './App';      // O nosso painel de administração
 import AppPwa from './App-pwa';  // O nosso PWA para o usuário
+import TotemPoC from './pages/TotemPoC'
+import ProfilePage from './pages/pwa/ProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -22,9 +24,12 @@ const MasterApp = () => (
             <Routes>
               {/* Se o URL começar com /app, carrega o PWA */}
               <Route path="/app/*" element={<AppPwa />} />
-              
+              <Route path="/totem" element={<TotemPoC />} />
+              <Route path="/app/profile" element={<ProfilePage />} />      
+                      
               {/* Para todas as outras rotas, carrega o Painel Admin */}
               <Route path="/*" element={<AppAdmin />} />
+
             </Routes>
           </PermissionsProvider>
         </AuthProvider>

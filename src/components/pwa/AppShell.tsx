@@ -33,7 +33,7 @@ const navItems = [
     { href: "/app/", label: "Início", icon: Home },
     { href: "/app/biblia", label: "Bíblia", icon: BookOpen },
     { href: "/app/oracao", label: "Oração", icon: Heart },
-    { href: "/app/perfil", label: "Perfil", icon: User },
+    { href: "/app/profile", label: "Perfil", icon: User },
     { href: "/app/mais", label: "Mais", icon: MoreHorizontal },
 ];
 
