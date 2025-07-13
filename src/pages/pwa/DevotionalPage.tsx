@@ -40,13 +40,16 @@ const DevotionalPage: React.FC = () => {
   const handleShare = async () => {
     if (!devotional) return;
 
-    const shareText = `*${devotional.titulo}*\n\n_"${devotional.texto_biblico}"_\n*${devotional.versiculo}*\n\n${devotional.mensagem}\n\nVeja mais no App do Ministério da Fé!`;
+    // Texto de compartilhamento atualizado com o link
+    const shareText = `*${devotional.titulo}*\n\n_"${devotional.texto_biblico}"_\n*${devotional.versiculo}*\n\n${devotional.mensagem}\n\nVeja mais no App do Ministério da Fé!\nhttps://app.ministeriodafesinop.com.br/app/`;
+    const shareUrl = `https://app.ministeriodafesinop.com.br/app/devotional/${devotional.data}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
           title: devotional.titulo,
           text: shareText,
+          url: shareUrl, // Adiciona a URL específica do devocional para um compartilhamento mais rico
         });
       } catch (error) {
         console.error('Erro ao compartilhar:', error);

@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 
 
 // --- Adicionado para o Devocional ---
+// Interface para a estrutura do devocional, baseada no seu JSON
 interface Devotional {
   id: number;
   data: string;
@@ -21,7 +22,7 @@ interface Devotional {
   oracao: string;
 }
 
-// Função de busca limpa, sem os logs de console
+// Função para buscar o devocional (lógica melhorada)
 const fetchTodaysDevotional = async (): Promise<Devotional | null> => {
   try {
     const response = await fetch('/data/devocional.json');
@@ -31,7 +32,7 @@ const fetchTodaysDevotional = async (): Promise<Devotional | null> => {
     
     const devotionals: Devotional[] = await response.json();
     if (!devotionals || devotionals.length === 0) {
-      return null;
+      return null; // Retorna nulo se o arquivo estiver vazio
     }
 
     const todayString = new Date().toISOString().split('T')[0];
@@ -76,11 +77,16 @@ const DevotionalSummaryCard: React.FC = () => {
   return (
     <Link to={`/app/devotional/${devotional.data}`} className="block bg-neutral-900 border border-neutral-800 rounded-xl p-4 shadow-lg hover:bg-neutral-800 transition-colors">
       <div className="flex items-center gap-4">
-        <div className="w-20 h-20 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0">
-          <ImageIcon size={32} className="text-neutral-600" />
-        </div>
+        {/* Espaço da imagem atualizado */}
+        <img 
+          src="/icons/devocional.png" 
+          alt="Estudo do Dia" 
+          className="w-20 h-20 object-cover rounded-lg flex-shrink-0" 
+        />
+        
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-emerald-400 font-semibold mb-1">{formattedDate}</p>
+          {/* Linha da data atualizada */}
+          <p className="text-sm text-emerald-400 font-semibold mb-1">Devocional • {formattedDate}</p>
           <h3 className="text-lg font-bold text-white leading-tight truncate">{devotional.titulo}</h3>
           <p className="text-sm text-neutral-400 mt-1 truncate">{devotional.versiculo}</p>
         </div>
