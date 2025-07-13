@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Church, MapPin, PhoneCall, SmilePlus } from 'lucide-react';
+import { User, Church, MapPin, PhoneCall, SmilePlus, KeyRound } from 'lucide-react';
 
 // Declara a variável global da face-api
 declare const faceapi: any;
@@ -67,41 +67,28 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFacialModalOpen, setFacialModalOpen] = useState(false);
   
-  // Estados separados para cada tabela, como no painel
   const [profileData, setProfileData] = useState<any>({});
   const [memberData, setMemberData] = useState<any>({});
+  const [password, setPassword] = useState('');
 
-  // Carrega os dados do perfil e do membro
   const fetchUserData = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
+    if (user) {
+      // Usuário logado: busca dados existentes
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (profileError && profileError.code !== 'PGRST116') console.error('Erro ao buscar perfil:', profileError);
+      setProfileData(profile || { id: user.id, email: user.email });
 
-    // 1. Busca o perfil
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Erro ao buscar perfil:', profileError);
-    }
-    setProfileData(profile || { id: user.id, email: user.email });
-
-    // 2. Se o perfil existir, busca os dados de membro associados
-    if (profile) {
-      const { data: member, error: memberError } = await supabase
-        .from('members')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .single();
-      
-      if (memberError && memberError.code !== 'PGRST116') {
-        console.error('Erro ao buscar dados de membro:', memberError);
+      if (profile) {
+        const { data: member, error: memberError } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
+        if (memberError && memberError.code !== 'PGRST116') console.error('Erro ao buscar dados de membro:', memberError);
+        setMemberData(member || {});
       }
-      setMemberData(member || {});
+    } else {
+      // Novo usuário: prepara formulário em branco
+      setProfileData({});
+      setMemberData({});
     }
-    
     setLoading(false);
   }, [user]);
 
@@ -124,50 +111,60 @@ const ProfilePage: React.FC = () => {
   const handleFacialCaptureSuccess = (descriptor: number[]) => {
     setProfileData({ ...profileData, face_descriptor: descriptor });
     setFacialModalOpen(false);
-    alert('Rosto capturado! Clique em "Salvar Alterações" para confirmar.');
+    alert('Rosto capturado! Clique em "Salvar" para confirmar.');
   };
 
-  // Salva todas as alterações
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileData.full_name) {
-      alert('O nome completo é obrigatório.');
+    if (!profileData.full_name || !profileData.email) {
+      alert('Nome completo e email são obrigatórios.');
       return;
+    }
+    if (!user && !password) {
+        alert('A senha é obrigatória para o cadastro.');
+        return;
     }
     setLoading(true);
 
     try {
-      // 1. Salva (cria ou atualiza) os dados em 'profiles'
-      const { data: savedProfile, error: profileError } = await supabase
-        .from('profiles')
-        .upsert(profileData)
-        .select()
-        .single();
+      if (user) {
+        // --- ATUALIZAR USUÁRIO EXISTENTE ---
+        const { error: profileError } = await supabase.from('profiles').upsert(profileData).eq('id', user.id);
+        if (profileError) throw profileError;
 
-      if (profileError) throw profileError;
+        const memberPayload = { ...memberData, profile_id: user.id };
+        const { error: memberError } = await supabase.from('members').upsert(memberPayload, { onConflict: 'profile_id' });
+        if (memberError) throw memberError;
+        alert('Perfil salvo com sucesso!');
 
-      // 2. Salva (cria ou atualiza) os dados em 'members'
-      const memberPayload = {
-        ...memberData,
-        profile_id: savedProfile.id, // Garante a associação correta
-      };
-      
-      const { error: memberError } = await supabase
-        .from('members')
-        .upsert(memberPayload, { onConflict: 'profile_id' }); // Usa profile_id como chave de conflito
+      } else {
+        // --- CADASTRAR NOVO USUÁRIO ---
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: profileData.email,
+          password: password,
+        });
+        if (signUpError) throw signUpError;
+        if (!authData.user) throw new Error("Cadastro falhou, usuário não criado.");
+        
+        const newProfilePayload = { ...profileData, id: authData.user.id };
+        const { error: profileError } = await supabase.from('profiles').insert(newProfilePayload);
+        if (profileError) throw profileError;
 
-      if (memberError) throw memberError;
-
-      alert('Perfil salvo com sucesso!');
-      fetchUserData(); // Recarrega os dados para garantir consistência
+        const memberPayload = { ...memberData, profile_id: authData.user.id };
+        const { error: memberError } = await supabase.from('members').insert(memberPayload);
+        if (memberError) throw memberError;
+        
+        alert('Cadastro realizado com sucesso! Verifique seu email para confirmar a conta.');
+      }
+      fetchUserData();
     } catch (error: any) {
-      alert('Erro ao salvar o perfil: ' + error.message);
+      alert('Erro ao salvar: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="p-4 text-center text-white bg-gray-900 min-h-screen">Carregando perfil...</div>;
+  if (loading) return <div className="p-4 text-center text-white bg-gray-900 min-h-screen">Carregando...</div>;
 
   return (
     <div className="bg-gray-900 min-h-screen text-white p-4 pb-20">
@@ -179,14 +176,16 @@ const ProfilePage: React.FC = () => {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto">
-        <h1 className="text-3xl font-bold text-center">Meu Perfil</h1>
+        <h1 className="text-3xl font-bold text-center">{user ? 'Meu Perfil' : 'Criar Nova Conta'}</h1>
         
-        {/* Card: Informações Pessoais */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader><CardTitle className="flex items-center gap-2"><User /> Informações Pessoais</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div><Label>Nome Completo *</Label><Input name="full_name" value={profileData.full_name || ''} onChange={handleProfileChange} required /></div>
-            <div><Label>Email</Label><Input name="email" type="email" value={profileData.email || ''} disabled className="text-gray-400" /></div>
+            <div><Label>Email *</Label><Input name="email" type="email" value={profileData.email || ''} onChange={handleProfileChange} disabled={!!user} required /></div>
+            {!user && (
+              <div><Label>Senha *</Label><Input name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+            )}
             <div><Label>Telefone</Label><Input name="phone" type="tel" value={profileData.phone || ''} onChange={handleProfileChange} /></div>
             <div><Label>Data de Nascimento</Label><Input name="birth_date" type="date" value={profileData.birth_date || ''} onChange={handleProfileChange} /></div>
             <div><Label>Estado Civil</Label>
@@ -199,7 +198,6 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Card: Informações Eclesiásticas */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader><CardTitle className="flex items-center gap-2"><Church /> Informações Eclesiásticas</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -209,7 +207,6 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
         
-        {/* Card: Endereço */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader><CardTitle className="flex items-center gap-2"><MapPin /> Endereço</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -220,7 +217,6 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Card: Contato de Emergência */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader><CardTitle className="flex items-center gap-2"><PhoneCall /> Contato de Emergência</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -229,7 +225,6 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Card: Cadastro Facial */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader><CardTitle className="flex items-center gap-2"><SmilePlus /> Reconhecimento Facial</CardTitle></CardHeader>
           <CardContent className="text-center">
@@ -247,10 +242,9 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Botão de Salvar Fixo */}
         <div className="fixed bottom-16 left-0 right-0 p-4 bg-gray-900 border-t border-gray-800">
             <Button type="submit" disabled={loading} className="w-full max-w-lg mx-auto p-3 bg-emerald-600 rounded-lg font-bold text-lg disabled:bg-gray-500">
-            {loading ? 'Salvando...' : 'Salvar Alterações'}
+            {loading ? 'Salvando...' : (user ? 'Salvar Alterações' : 'Criar Conta')}
             </Button>
         </div>
       </form>
