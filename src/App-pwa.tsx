@@ -7,6 +7,7 @@ import { BiblePage } from "./pages/pwa/BiblePage";
 import ProfilePage from "./pages/pwa/ProfilePage";
 import AnnouncementsListPage from "./pages/pwa/AnnouncementsListPage";
 import AnnouncementPage from "./pages/pwa/AnnouncementPage";
+import DevotionalPage from "./pages/pwa/DevotionalPage";
 
 // Placeholders para outras páginas que você já tinha
 const PrayerPage = () => <div className="p-4 text-white">Página de Pedidos de Oração</div>;
@@ -25,6 +26,7 @@ function AppPwa() {
         <Route path="mais" element={<MorePage />} />
         <Route path="announcements" element={<AnnouncementsListPage />} />
         <Route path="announcement/:id" element={<AnnouncementPage />} />
+        <Route path="devotional/:date" element={<DevotionalPage />} />
       </Route>
     </Routes>
   );

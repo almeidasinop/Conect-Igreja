@@ -3,15 +3,96 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Calendar, MapPin, BookOpen, Plus, Heart, CalendarDays, ArrowRight, Youtube } from 'lucide-react';
+import { Calendar, MapPin, BookOpen, Plus, Heart, CalendarDays, ArrowRight, Youtube, Image as ImageIcon } from 'lucide-react';
 import { type Event, type Announcement } from '@/integrations/supabase/types';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
 
-// --- CONFIGURAÇÃO DO YOUTUBE ---
-// IMPORTANTE: Substitua pela sua Chave de API do YouTube.
+
+// --- Adicionado para o Devocional ---
+interface Devotional {
+  id: number;
+  data: string;
+  titulo: string;
+  versiculo: string;
+  texto_biblico: string;
+  mensagem: string;
+  oracao: string;
+}
+
+// Função de busca limpa, sem os logs de console
+const fetchTodaysDevotional = async (): Promise<Devotional | null> => {
+  try {
+    const response = await fetch('/data/devocional.json');
+    if (!response.ok) {
+      throw new Error(`Falha ao carregar devocionais. Status: ${response.status}`);
+    }
+    
+    const devotionals: Devotional[] = await response.json();
+    if (!devotionals || devotionals.length === 0) {
+      return null;
+    }
+
+    const todayString = new Date().toISOString().split('T')[0];
+    let devotionalToShow = devotionals.find(d => d.data === todayString);
+
+    if (!devotionalToShow) {
+      const sortedDevotionals = [...devotionals].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      devotionalToShow = sortedDevotionals[0];
+    }
+    
+    return devotionalToShow || null;
+
+  } catch (error) {
+    console.error("Erro ao buscar o devocional:", error);
+    return null;
+  }
+};
+
+// Card de resumo para a HomePage
+const DevotionalSummaryCard: React.FC = () => {
+  const { data: devotional, isLoading, isError } = useQuery<Devotional | null>({
+    queryKey: ['todaysDevotionalSummary'],
+    queryFn: fetchTodaysDevotional,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-28 w-full rounded-xl bg-neutral-800" />;
+  }
+
+  if (isError || !devotional) {
+    return (
+      <p className="text-sm text-muted-foreground">Nenhum estudo disponível.</p>
+    );
+  }
+  
+  const formattedDate = new Date(devotional.data + 'T00:00:00').toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+  });
+
+  return (
+    <Link to={`/app/devotional/${devotional.data}`} className="block bg-neutral-900 border border-neutral-800 rounded-xl p-4 shadow-lg hover:bg-neutral-800 transition-colors">
+      <div className="flex items-center gap-4">
+        <div className="w-20 h-20 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0">
+          <ImageIcon size={32} className="text-neutral-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-emerald-400 font-semibold mb-1">{formattedDate}</p>
+          <h3 className="text-lg font-bold text-white leading-tight truncate">{devotional.titulo}</h3>
+          <p className="text-sm text-neutral-400 mt-1 truncate">{devotional.versiculo}</p>
+        </div>
+      </div>
+    </Link>
+  );
+};
+// --- Fim da adição para o Devocional ---
+
+
+// --- CÓDIGO EXISTENTE DA SUA HOMEPAGE ---
 const YOUTUBE_API_KEY = 'AIzaSyAI6ElLWG73MlKLlQey48z6Di7xnm7IoII'; 
-// ID do canal do Ministério da Fé
 const YOUTUBE_CHANNEL_ID = 'UC2_epYhGE1zrwFY2dw69H6Q'; 
 
 type YouTubeVideo = {
@@ -31,53 +112,33 @@ const QuickActionButton = ({ icon: Icon, label, to }: { icon: React.ElementType,
 const HomePage = () => {
   const { user } = useAuth();
 
-  // --- BUSCA ATUALIZADA: Eventos Visíveis ---
   const { data: events, isLoading: isLoadingEvents } = useQuery<Event[]>({
     queryKey: ['visible_future_events', user?.id],
     queryFn: async () => {
-      // Obtenha o ID do usuário e os IDs dos grupos (você precisará implementar isso)
-      const userId = user?.id || null; // Assumindo que 'user' vem do seu contexto de autenticação
-      const userGroupIds = await getUserGroupIds(userId); // Função para obter IDs dos grupos do usuário
-
-      // Chama a função PostgreSQL para obter apenas os eventos visíveis
+      const userId = user?.id || null;
+      const userGroupIds = await getUserGroupIds(userId);
       const { data, error } = await supabase.rpc('get_visible_events', {
-        user_id: userId, // Passe o ID do usuário
-        user_group_ids: userGroupIds, // Passe os IDs dos grupos
+        user_id: userId,
+        user_group_ids: userGroupIds,
       });
-
       if (error) {
         console.error("Error fetching visible events:", error);
         throw new Error(error.message);
       }
-      // Limita o resultado a 3 na home page (a função AGORA filtra por visibilidade e grupos,
-      // você pode adicionar filtro por data na função SQL também)
       return (data || []).slice(0, 3);
     },
-    // CORREÇÃO: A busca só será executada QUANDO a verificação de auth terminar (se aplicável)
-    // Se user?.id é suficiente para determinar se o usuário está logado, a queryKey já lida com isso.
-    // Se você tiver um estado isLoading de autenticação separado, pode usar 'enabled' aqui.
-    // enabled: !isAuthLoading, // Exemplo: descomente se tiver um isAuthLoading
   });
 
-// Exemplo de função para obter IDs dos grupos do usuário (você precisará implementar a lógica real)
-async function getUserGroupIds(userId: string | null): Promise<string[]> {
-  if (!userId) {
-    return []; // Retorna array vazio se usuário não estiver logado
-  }
-  // Implemente a lógica para buscar os IDs dos grupos do usuário logado
-  // Isso provavelmente envolverá outra query ao Supabase para uma tabela de associação de usuários e grupos
-  const { data, error } = await supabase.from('user_groups').select('group_id').eq('user_id', userId);
-
-  if (error) {
-    console.error('Erro ao buscar grupos do usuário:', error);
-    return [];
+  async function getUserGroupIds(userId: string | null): Promise<string[]> {
+    if (!userId) return [];
+    const { data, error } = await supabase.from('user_groups').select('group_id').eq('user_id', userId);
+    if (error) {
+      console.error('Erro ao buscar grupos do usuário:', error);
+      return [];
+    }
+    return data?.map(item => item.group_id) || [];
   }
 
-  return data?.map(item => item.group_id) || [];
-}
-
-
-  // Busca por anúncios
   const { data: announcements, isLoading: isLoadingAnnouncements } = useQuery<Announcement[]>({
     queryKey: ['announcements'],
     queryFn: async () => {
@@ -87,7 +148,6 @@ async function getUserGroupIds(userId: string | null): Promise<string[]> {
     },
   });
 
-  // --- BUSCA: Vídeos do YouTube ---
   const { data: videos, isLoading: isLoadingVideos, error: videosError } = useQuery<YouTubeVideo[]>({
     queryKey: ['youtube_videos'],
     queryFn: async () => {
@@ -194,12 +254,14 @@ async function getUserGroupIds(userId: string | null): Promise<string[]> {
           )}
         </section>
 
+        {/* --- SEÇÃO DE ESTUDOS ATUALIZADA --- */}
         <section>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl font-bold">Estudos</h2>
             <Link to="#" className="text-sm font-semibold text-blue-400 flex items-center gap-1">Ver todos <ArrowRight className="h-4 w-4" /></Link>
           </div>
-          <p className="text-sm text-muted-foreground">Nenhum estudo recente.</p>
+          {/* O placeholder foi substituído pelo nosso novo componente de card */}
+          <DevotionalSummaryCard />
         </section>
 
       </div>
