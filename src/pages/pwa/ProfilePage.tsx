@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Church, MapPin, PhoneCall, SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast'; // Importa o hook para notificações
 
 // Declara a variável global da face-api
 declare const faceapi: any;
@@ -19,7 +20,6 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
   const [isFaceDetected, setIsFaceDetected] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
 
-  // CORREÇÃO: Carrega os modelos de IA quando o modal é aberto
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = '/models';
@@ -40,7 +40,6 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
     loadModels();
   }, []);
 
-  // Inicia a câmera ao montar o componente
   useEffect(() => {
     if (modelsLoaded) {
         const startVideo = () => {
@@ -54,7 +53,6 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
     }
   }, [modelsLoaded]);
 
-  // Inicia a detecção facial quando o vídeo começa a tocar
   const handleVideoOnPlay = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -83,7 +81,7 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
           }
         }
       }
-    }, 400); // Roda a detecção a cada 400ms
+    }, 400);
 
     return () => clearInterval(detectionInterval);
   };
@@ -113,7 +111,8 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
           isFaceDetected ? "border-emerald-500 animate-pulse" : "border-gray-600"
         )}>
           <video ref={videoRef} autoPlay muted onPlay={handleVideoOnPlay} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-          <canvas ref={canvasRef} className="absolute top-0 left-0" />
+          {/* CORREÇÃO: Adicionado o espelhamento no canvas para alinhar com o vídeo */}
+          <canvas ref={canvasRef} className="absolute top-0 left-0" style={{ transform: 'scaleX(-1)' }}/>
         </div>
         <p className="text-white my-4 h-6">{status}</p>
         <div className="space-y-3">
@@ -125,14 +124,12 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
   );
 };
 
-// Componente de Cabeçalho Padrão para as Páginas do PWA
 const PageHeader = ({ title }: { title: string }) => (
   <header className="sticky top-0 bg-black z-10 p-4 text-center border-b border-neutral-800">
     <h1 className="text-xl font-bold">{title}</h1>
   </header>
 );
 
-// OTIMIZAÇÃO: Mover FormSection para fora e usar React.memo para evitar re-renderizações desnecessárias.
 const FormSection = React.memo(({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
       <h2 className="text-lg font-bold flex items-center gap-2 mb-4"><span className="text-emerald-400">{icon}</span>{title}</h2>
@@ -140,26 +137,21 @@ const FormSection = React.memo(({ title, icon, children }: { title: string, icon
     </div>
 ));
 
-
-// Componente Principal da Página de Perfil
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast(); // Inicializa o hook de notificações
   const [loading, setLoading] = useState(true);
   const [isFacialModalOpen, setFacialModalOpen] = useState(false);
-  
   const [formData, setFormData] = useState<any>({});
 
-  // OTIMIZAÇÃO: Lógica de busca de dados mais robusta.
   useEffect(() => {
-    let isMounted = true; // Flag para evitar atualização de estado em componente desmontado
-
+    let isMounted = true;
     const fetchUserData = async () => {
       if (!user?.id) {
         setFormData({});
         if(isMounted) setLoading(false);
         return;
       }
-      
       setLoading(true);
       try {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
@@ -167,7 +159,7 @@ const ProfilePage: React.FC = () => {
           const { data: member } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
           setFormData({ ...profile, ...member });
         } else if (isMounted) {
-            setFormData({ email: user.email }); // Preenche o email para o novo perfil
+            setFormData({ email: user.email });
         }
       } catch (error) {
         console.error("Erro ao buscar dados do perfil:", error);
@@ -175,15 +167,10 @@ const ProfilePage: React.FC = () => {
         if (isMounted) setLoading(false);
       }
     };
-
     fetchUserData();
+    return () => { isMounted = false; };
+  }, [user?.id]);
 
-    return () => {
-      isMounted = false; // Cleanup
-    };
-  }, [user?.id]); // Dependência estável, só roda quando o usuário muda.
-
-  // OTIMIZAÇÃO: Handlers memoizados com useCallback para não serem recriados a cada renderização.
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev: any) => ({ ...prev, [name]: value }));
@@ -196,20 +183,24 @@ const ProfilePage: React.FC = () => {
   const handleFacialCaptureSuccess = useCallback((descriptor: number[]) => {
     setFormData((prev: any) => ({ ...prev, face_descriptor: descriptor }));
     setFacialModalOpen(false);
-    alert('Rosto capturado! Clique em "Salvar" para confirmar.');
-  }, []);
+    // Substitui o alert() por uma notificação (toast)
+    toast({
+      title: "Rosto Capturado!",
+      description: "Não se esqueça de salvar as alterações para confirmar.",
+    });
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { full_name, email, password } = formData;
 
     if (!full_name || !email) {
-      alert('Nome completo e email são obrigatórios.');
+      toast({ title: "Campos Obrigatórios", description: "Nome completo e email são necessários.", variant: "destructive" });
       return;
     }
     if (!user && !password) {
-        alert('A senha é obrigatória para o cadastro.');
-        return;
+      toast({ title: "Campo Obrigatório", description: "A senha é necessária para criar uma nova conta.", variant: "destructive" });
+      return;
     }
     setLoading(true);
 
@@ -223,26 +214,15 @@ const ProfilePage: React.FC = () => {
       }
 
       const profilePayload = {
-        id: userId,
-        full_name: formData.full_name,
-        email: formData.email,
-        phone: formData.phone,
-        birth_date: formData.birth_date,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zip_code: formData.zip_code,
-        face_descriptor: formData.face_descriptor,
+        id: userId, full_name: formData.full_name, email: formData.email, phone: formData.phone,
+        birth_date: formData.birth_date, address: formData.address, city: formData.city,
+        state: formData.state, zip_code: formData.zip_code, face_descriptor: formData.face_descriptor,
       };
       
       const memberPayload = {
-        profile_id: userId,
-        marital_status: formData.marital_status,
-        profession: formData.profession,
-        conversion_date: formData.conversion_date,
-        baptism_date: formData.baptism_date,
-        origin_church: formData.origin_church,
-        emergency_contact_name: formData.emergency_contact_name,
+        profile_id: userId, marital_status: formData.marital_status, profession: formData.profession,
+        conversion_date: formData.conversion_date, baptism_date: formData.baptism_date,
+        origin_church: formData.origin_church, emergency_contact_name: formData.emergency_contact_name,
         emergency_contact_phone: formData.emergency_contact_phone,
       };
 
@@ -252,10 +232,13 @@ const ProfilePage: React.FC = () => {
       const { error: memberError } = await supabase.from('members').upsert(memberPayload, { onConflict: 'profile_id' });
       if (memberError) throw memberError;
 
-      alert(user ? 'Perfil salvo com sucesso!' : 'Cadastro realizado com sucesso! Verifique seu email.');
+      toast({
+        title: "Sucesso!",
+        description: user ? 'Seu perfil foi salvo com sucesso.' : 'Cadastro realizado com sucesso! Verifique seu email para confirmar a conta.',
+      });
       
     } catch (error: any) {
-      alert('Erro ao salvar: ' + error.message);
+      toast({ title: "Erro ao Salvar", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }

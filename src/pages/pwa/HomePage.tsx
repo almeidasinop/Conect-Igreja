@@ -15,8 +15,7 @@ import { cn } from '@/lib/utils';
 
 // Título de Seção Padrão
 const SectionHeader = ({ title, linkTo = "#" }: { title: string; linkTo?: string }) => (
-    // O padding agora é controlado pelo container da seção
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center px-4">
         <h2 className="text-xl font-bold">{title}</h2>
         <Link to={linkTo} className="text-sm font-semibold text-emerald-400 flex items-center gap-1">
             Ver todos <ArrowRight className="h-4 w-4" />
@@ -24,9 +23,9 @@ const SectionHeader = ({ title, linkTo = "#" }: { title: string; linkTo?: string
     </div>
 );
 
-// Container para Rolagem Horizontal (Estrutura corrigida com margem negativa)
+// Container para Rolagem Horizontal
 const HorizontalScrollContainer = ({ children }: { children: React.ReactNode }) => (
-    <div className="overflow-x-auto scrollbar-hide -mx-4">
+    <div className="overflow-x-auto scrollbar-hide">
         <div className="flex space-x-4 px-4 pb-4">
             {children}
         </div>
@@ -102,30 +101,23 @@ const HomePage = () => {
     const YOUTUBE_CHANNEL_ID = 'UC2_epYhGE1zrwFY2dw69H6Q';
 
     // --- QUERIES (BUSCA DE DADOS) ---
-    async function getUserGroupIds(userId: string | null): Promise<string[]> {
-        if (!userId) return [];
-        const { data, error } = await supabase.from('user_groups').select('group_id').eq('user_id', userId);
-        if (error) {
-            console.error('Erro ao buscar grupos do usuário:', error);
-            return [];
-        }
-        return data?.map(item => item.group_id) || [];
-    }
-
+    
+    // CORREÇÃO: Busca eventos futuros diretamente da tabela
     const { data: events, isLoading: isLoadingEvents } = useQuery<Event[]>({
-        queryKey: ['visible_future_events', user?.id],
+        queryKey: ['future_events_home', user?.id],
         queryFn: async () => {
-          const userId = user?.id || null;
-          const userGroupIds = await getUserGroupIds(userId);
-          const { data, error } = await supabase.rpc('get_visible_events', {
-            user_id: userId,
-            user_group_ids: userGroupIds,
-          });
+          const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .gte('start_time', new Date().toISOString()) // Garante que só eventos futuros são buscados
+            .order('start_time', { ascending: true })
+            .limit(3);
+          
           if (error) {
-            console.error("Error fetching visible events:", error);
+            console.error("Error fetching future events:", error);
             throw new Error(error.message);
           }
-          return (data || []).slice(0, 3);
+          return data || [];
         },
     });
 
@@ -142,12 +134,11 @@ const HomePage = () => {
         queryKey: ['youtube_videos'],
         queryFn: async () => {
             if (YOUTUBE_API_KEY === 'COLE_SUA_CHAVE_DE_API_AQUI') {
-                console.warn("Chave de API do YouTube não configurada. A busca de vídeos foi ignorada.");
                 return [];
             }
             const response = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=5&type=video`);
             if (!response.ok) {
-                throw new Error('Falha ao buscar vídeos do YouTube. Verifique sua chave de API.');
+                throw new Error('Falha ao buscar vídeos do YouTube.');
             }
             const data = await response.json();
             return data.items || [];
@@ -179,22 +170,19 @@ const HomePage = () => {
             </header>
             <div className="grid grid-cols-4 gap-4 px-4 -mt-16 relative z-20">
                 <QuickActionButton icon={BookOpen} label="Bíblia" to="/app/biblia" />
-                <QuickActionButton icon={Plus} label="Pedido de Oração" to="/app/prayer-request" />
-                <QuickActionButton icon={Heart} label="Envolva-se" to="#" />
-                <QuickActionButton icon={CalendarDays} label="Horários" to="#" />
+                <QuickActionButton icon={Plus} label="Oração" to="/app/prayer-request" />
+                <QuickActionButton icon={Heart} label="Envolva-se" to="/app/giving" />
+                <QuickActionButton icon={CalendarDays} label="Horários" to="/app/schedule" />
             </div>
 
             {/* --- SEÇÕES DE CONTEÚDO --- */}
             <div className="space-y-8">
                 {/* Notícias */}
-                <section className="px-4">
+                <section>
                     <SectionHeader title="Notícias" linkTo="/app/announcements" />
                     <div className="mt-2">
                         {isLoadingAnnouncements ? (
-                            <HorizontalScrollContainer>
-                                <Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" />
-                                <Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" />
-                            </HorizontalScrollContainer>
+                            <HorizontalScrollContainer><Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" /></HorizontalScrollContainer>
                         ) : announcements && announcements.length > 0 ? (
                             <HorizontalScrollContainer>
                                 {announcements.map((announcement) => (
@@ -207,49 +195,38 @@ const HomePage = () => {
                                     />
                                 ))}
                             </HorizontalScrollContainer>
-                        ) : <p className="text-sm text-muted-foreground">Nenhuma notícia recente.</p>}
+                        ) : <p className="text-sm text-muted-foreground px-4">Nenhuma notícia recente.</p>}
                     </div>
                 </section>
 
                 {/* Agenda */}
-                <section className="px-4">
-                    <SectionHeader title="Agenda" linkTo="#" />
+                <section>
+                    <SectionHeader title="Agenda" linkTo="/app/schedule" />
                     <div className="mt-2">
                         {isLoadingEvents ? (
-                            <Skeleton className="h-52 w-full rounded-xl" />
+                            <HorizontalScrollContainer><Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" /></HorizontalScrollContainer>
                         ) : events && events.length > 0 ? (
-                            <div className="space-y-4">
+                            <HorizontalScrollContainer>
                                 {events.map((event) => (
-                                    <Card key={event.id} className="relative overflow-hidden text-white bg-cover bg-center shadow-lg border-0 rounded-xl h-52 group">
-                                        <div 
-                                            className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-                                            style={{ backgroundImage: `url(${event.image_url || 'https://placehold.co/600x400/334155/ffffff?text=Evento'})` }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                                        <div className="p-4 flex flex-col justify-end h-full relative z-10">
-                                            <CardTitle className="text-2xl font-bold drop-shadow-md">{event.title}</CardTitle>
-                                            {event.description && <CardDescription className="text-gray-200 text-md mt-1 drop-shadow-md">{event.description}</CardDescription>}
-                                            <div className="mt-3 text-sm text-gray-100 space-y-1 font-medium">
-                                                <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{formatEventDateTime(event.start_time)}</span></div>
-                                                {event.location && (<div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{event.location}</span></div>)}
-                                            </div>
-                                        </div>
-                                    </Card>
+                                    <ContentCard
+                                        key={event.id}
+                                        to={`/app/event/${event.id}`}
+                                        imageUrl={event.image_url || 'https://placehold.co/600x400/334155/ffffff?text=Evento'}
+                                        title={event.title}
+                                        description={formatEventDateTime(event.start_time)}
+                                    />
                                 ))}
-                            </div>
-                        ) : <p className="text-sm text-muted-foreground">Nenhum evento agendado.</p>}
+                            </HorizontalScrollContainer>
+                        ) : <p className="text-sm text-muted-foreground px-4">Nenhum evento futuro agendado.</p>}
                     </div>
                 </section>
 
                 {/* Vídeos */}
-                <section className="px-4">
+                <section>
                     <SectionHeader title="Vídeos" linkTo={`https://www.youtube.com/channel/${YOUTUBE_CHANNEL_ID}`} />
                     <div className="mt-2">
                         {isLoadingVideos ? (
-                            <HorizontalScrollContainer>
-                                <Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" />
-                                <Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" />
-                            </HorizontalScrollContainer>
+                            <HorizontalScrollContainer><Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" /></HorizontalScrollContainer>
                         ) : videosError ? (
                             <Alert variant="destructive" className="mx-4"><AlertTitle>Erro</AlertTitle><AlertDescription>Não foi possível carregar os vídeos.</AlertDescription></Alert>
                         ) : videos && videos.length > 0 ? (
@@ -264,18 +241,16 @@ const HomePage = () => {
                                     />
                                 ))}
                             </HorizontalScrollContainer>
-                        ) : <p className="text-sm text-muted-foreground">Nenhum vídeo recente.</p>}
+                        ) : <p className="text-sm text-muted-foreground px-4">Nenhum vídeo recente.</p>}
                     </div>
                 </section>
 
                 {/* Estudos */}
-                <section className="px-4">
+                <section>
                     <SectionHeader title="Estudos" linkTo="#" />
                     <div className="mt-2">
                          {isLoadingDevotional ? (
-                            <HorizontalScrollContainer>
-                                <Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" />
-                            </HorizontalScrollContainer>
+                            <HorizontalScrollContainer><Skeleton className="h-52 w-[85vw] rounded-xl flex-shrink-0" /></HorizontalScrollContainer>
                         ) : devotional ? (
                             <HorizontalScrollContainer>
                                 <ContentCard
@@ -284,9 +259,8 @@ const HomePage = () => {
                                     title={devotional.titulo}
                                     description={`Devocional • ${new Date(devotional.data + 'T00:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`}
                                 />
-                                {/* Adicione mais cards de estudo aqui se necessário */}
                             </HorizontalScrollContainer>
-                        ) : <p className="text-sm text-muted-foreground">Nenhum estudo disponível.</p>}
+                        ) : <p className="text-sm text-muted-foreground px-4">Nenhum estudo disponível.</p>}
                     </div>
                 </section>
             </div>
