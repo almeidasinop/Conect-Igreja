@@ -1,67 +1,68 @@
-import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import LoadingScreen from '@/components/pwa/LoadingScreen'; // Importe a nova tela de loading
 
-// Definir o tipo para o nosso contexto
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
+    user: User | null;
+    session: Session | null;
+    loading: boolean;
 }
 
-// Criar o contexto com um valor inicial nulo
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Criar o provedor do contexto
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+    const [session, setSession] = useState<Session | null>(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Busca a sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    useEffect(() => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setSession(session);
+                setUser(session?.user ?? null);
+                // A primeira verificação já terá acontecido, então podemos manter o loading como false
+                if (loading) setLoading(false);
+            }
+        );
 
-    // Ouve as mudanças no estado de autenticação (login, logout)
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+        // Garante que o estado de loading seja falso após a verificação inicial
+        const getInitialSession = async () => {
+            // Não precisa chamar getSession() aqui, pois o onAuthStateChange já é
+            // disparado na inicialização com o evento INITIAL_SESSION.
+            // Apenas definimos o loading como falso após um pequeno delay para evitar um flash rápido.
+            setTimeout(() => {
+                setLoading(false);
+            }, 500); // Meio segundo para uma transição suave
+        }
 
-    // Limpa o ouvinte quando o componente é desmontado
-    return () => {
-      authListener?.subscription.unsubscribe();
+        getInitialSession();
+
+        return () => {
+            authListener?.subscription.unsubscribe();
+        };
+    }, [loading]);
+
+    const value = {
+        user,
+        session,
+        loading,
     };
-  }, []);
 
-  // Função de logout
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+    // Lógica de Renderização Condicional
+    // Enquanto o 'loading' for true, exibe a tela de carregamento.
+    if (loading) {
+        return <LoadingScreen />;
+    }
 
-  const value = {
-    session,
-    user,
-    loading,
-    signOut,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    // Quando o 'loading' for false, exibe o resto do aplicativo.
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Hook personalizado para usar o nosso contexto de autenticação
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };
