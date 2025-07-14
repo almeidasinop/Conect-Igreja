@@ -66,6 +66,15 @@ const PageHeader = ({ title }: { title: string }) => (
   </header>
 );
 
+// OTIMIZAÇÃO: Mover FormSection para fora e usar React.memo para evitar re-renderizações desnecessárias.
+const FormSection = React.memo(({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+      <h2 className="text-lg font-bold flex items-center gap-2 mb-4"><span className="text-emerald-400">{icon}</span>{title}</h2>
+      <div className="space-y-4">{children}</div>
+    </div>
+));
+
+
 // Componente Principal da Página de Perfil
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -74,35 +83,55 @@ const ProfilePage: React.FC = () => {
   
   const [formData, setFormData] = useState<any>({});
 
-  const fetchUserData = useCallback(async () => {
-    setLoading(true);
-    if (user) {
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      const { data: member } = profile ? await supabase.from('members').select('*').eq('profile_id', profile.id).single() : { data: null };
-      setFormData({ ...profile, ...member });
-    } else {
-      setFormData({});
-    }
-    setLoading(false);
-  }, [user]);
-
+  // OTIMIZAÇÃO: Lógica de busca de dados mais robusta.
   useEffect(() => {
+    let isMounted = true; // Flag para evitar atualização de estado em componente desmontado
+
+    const fetchUserData = async () => {
+      if (!user?.id) {
+        setFormData({});
+        if(isMounted) setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (profile && isMounted) {
+          const { data: member } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
+          setFormData({ ...profile, ...member });
+        } else if (isMounted) {
+            setFormData({ email: user.email }); // Preenche o email para o novo perfil
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do perfil:", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     fetchUserData();
-  }, [fetchUserData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    return () => {
+      isMounted = false; // Cleanup
+    };
+  }, [user?.id]); // Dependência estável, só roda quando o usuário muda.
+
+  // OTIMIZAÇÃO: Handlers memoizados com useCallback para não serem recriados a cada renderização.
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  }, []);
   
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
+  const handleSelectChange = useCallback((name: string, value: string) => {
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  }, []);
 
-  const handleFacialCaptureSuccess = (descriptor: number[]) => {
-    setFormData({ ...formData, face_descriptor: descriptor });
+  const handleFacialCaptureSuccess = useCallback((descriptor: number[]) => {
+    setFormData((prev: any) => ({ ...prev, face_descriptor: descriptor }));
     setFacialModalOpen(false);
     alert('Rosto capturado! Clique em "Salvar" para confirmar.');
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,15 +157,26 @@ const ProfilePage: React.FC = () => {
       }
 
       const profilePayload = {
-        id: userId, full_name: formData.full_name, email: formData.email, phone: formData.phone,
-        birth_date: formData.birth_date, address: formData.address, city: formData.city,
-        state: formData.state, zip_code: formData.zip_code, face_descriptor: formData.face_descriptor,
+        id: userId,
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        birth_date: formData.birth_date,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zip_code,
+        face_descriptor: formData.face_descriptor,
       };
       
       const memberPayload = {
-        profile_id: userId, marital_status: formData.marital_status, profession: formData.profession,
-        conversion_date: formData.conversion_date, baptism_date: formData.baptism_date,
-        origin_church: formData.origin_church, emergency_contact_name: formData.emergency_contact_name,
+        profile_id: userId,
+        marital_status: formData.marital_status,
+        profession: formData.profession,
+        conversion_date: formData.conversion_date,
+        baptism_date: formData.baptism_date,
+        origin_church: formData.origin_church,
+        emergency_contact_name: formData.emergency_contact_name,
         emergency_contact_phone: formData.emergency_contact_phone,
       };
 
@@ -147,7 +187,7 @@ const ProfilePage: React.FC = () => {
       if (memberError) throw memberError;
 
       alert(user ? 'Perfil salvo com sucesso!' : 'Cadastro realizado com sucesso! Verifique seu email.');
-      fetchUserData();
+      
     } catch (error: any) {
       alert('Erro ao salvar: ' + error.message);
     } finally {
@@ -157,15 +197,7 @@ const ProfilePage: React.FC = () => {
 
   if (loading) return <div className="p-4 text-center">Carregando...</div>;
 
-  const FormSection = ({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-      <h2 className="text-lg font-bold flex items-center gap-2 mb-4"><span className="text-emerald-400">{icon}</span>{title}</h2>
-      <div className="space-y-4">{children}</div>
-    </div>
-  );
-
   return (
-    // Removido o container de tela cheia. Agora este componente é renderizado dentro do layout do AppShell.
     <>
       {isFacialModalOpen && (
         <FacialCaptureModal onClose={() => setFacialModalOpen(false)} onCaptureSuccess={handleFacialCaptureSuccess} />
