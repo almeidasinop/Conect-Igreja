@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Church, MapPin, PhoneCall, SmilePlus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Declara a variável global da face-api
 declare const faceapi: any;
@@ -13,8 +14,11 @@ declare const faceapi: any;
 // Componente para a Câmera de Cadastro Facial (em um Modal)
 const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void, onCaptureSuccess: (descriptor: number[]) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState('Posicione seu rosto no centro');
+  const [isFaceDetected, setIsFaceDetected] = useState(false);
 
+  // Inicia a câmera ao montar o componente
   useEffect(() => {
     const startVideo = () => {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
@@ -25,6 +29,40 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
     };
     startVideo();
   }, []);
+
+  // Inicia a detecção facial quando o vídeo começa a tocar
+  const handleVideoOnPlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const detectionInterval = setInterval(async () => {
+      if (videoRef.current && !videoRef.current.paused) {
+        const detection = await faceapi
+          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks();
+        
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const displaySize = { width: video.videoWidth, height: video.videoHeight };
+          faceapi.matchDimensions(canvas, displaySize);
+          const resizedDetection = faceapi.resizeResults(detection, displaySize);
+          
+          canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (resizedDetection) {
+            faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
+            setIsFaceDetected(true);
+            setStatus("Ótimo! Fique parado.");
+          } else {
+            setIsFaceDetected(false);
+            setStatus("Posicione seu rosto no círculo.");
+          }
+        }
+      }
+    }, 400); // Roda a detecção a cada 400ms
+
+    return () => clearInterval(detectionInterval);
+  };
 
   const handleCapture = async () => {
     if (!videoRef.current) return;
@@ -46,12 +84,16 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
     <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 p-4">
       <div className="relative w-full max-w-md bg-gray-800 rounded-2xl p-6 text-center">
         <h2 className="text-2xl font-bold text-white mb-4">Cadastro Facial</h2>
-        <div className="relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 border-emerald-500">
-          <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+        <div className={cn(
+          "relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 transition-all",
+          isFaceDetected ? "border-emerald-500 animate-pulse" : "border-gray-600"
+        )}>
+          <video ref={videoRef} autoPlay muted onPlay={handleVideoOnPlay} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+          <canvas ref={canvasRef} className="absolute top-0 left-0" />
         </div>
-        <p className="text-white my-4">{status}</p>
+        <p className="text-white my-4 h-6">{status}</p>
         <div className="space-y-3">
-          <button onClick={handleCapture} className="w-full py-3 bg-emerald-500 rounded-full font-bold">Capturar Rosto</button>
+          <button onClick={handleCapture} disabled={!isFaceDetected} className="w-full py-3 bg-emerald-500 rounded-full font-bold disabled:bg-gray-500 disabled:opacity-50 transition-all">Capturar Rosto</button>
           <button onClick={onClose} className="w-full py-3 bg-gray-600 rounded-full font-bold">Cancelar</button>
         </div>
       </div>
