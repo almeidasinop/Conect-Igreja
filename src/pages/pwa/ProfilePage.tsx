@@ -15,20 +15,44 @@ declare const faceapi: any;
 const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void, onCaptureSuccess: (descriptor: number[]) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState('Posicione seu rosto no centro');
+  const [status, setStatus] = useState('Iniciando câmera...');
   const [isFaceDetected, setIsFaceDetected] = useState(false);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+
+  // CORREÇÃO: Carrega os modelos de IA quando o modal é aberto
+  useEffect(() => {
+    const loadModels = async () => {
+      const MODEL_URL = '/models';
+      setStatus('Carregando modelos de IA...');
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        setModelsLoaded(true);
+        setStatus('Posicione seu rosto no centro');
+      } catch (error) {
+        console.error("Erro ao carregar modelos da face-api:", error);
+        setStatus('Erro ao carregar modelos.');
+      }
+    };
+    loadModels();
+  }, []);
 
   // Inicia a câmera ao montar o componente
   useEffect(() => {
-    const startVideo = () => {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(stream => {
-          if (videoRef.current) videoRef.current.srcObject = stream;
-        })
-        .catch(() => setStatus('Erro ao acessar a câmera.'));
-    };
-    startVideo();
-  }, []);
+    if (modelsLoaded) {
+        const startVideo = () => {
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+            .then(stream => {
+              if (videoRef.current) videoRef.current.srcObject = stream;
+            })
+            .catch(() => setStatus('Erro ao acessar a câmera.'));
+        };
+        startVideo();
+    }
+  }, [modelsLoaded]);
 
   // Inicia a detecção facial quando o vídeo começa a tocar
   const handleVideoOnPlay = () => {
@@ -36,7 +60,7 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
     if (!video) return;
 
     const detectionInterval = setInterval(async () => {
-      if (videoRef.current && !videoRef.current.paused) {
+      if (videoRef.current && !videoRef.current.paused && modelsLoaded) {
         const detection = await faceapi
           .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
           .withFaceLandmarks();
@@ -93,7 +117,7 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
         </div>
         <p className="text-white my-4 h-6">{status}</p>
         <div className="space-y-3">
-          <button onClick={handleCapture} disabled={!isFaceDetected} className="w-full py-3 bg-emerald-500 rounded-full font-bold disabled:bg-gray-500 disabled:opacity-50 transition-all">Capturar Rosto</button>
+          <button onClick={handleCapture} disabled={!isFaceDetected || !modelsLoaded} className="w-full py-3 bg-emerald-500 rounded-full font-bold disabled:bg-gray-500 disabled:opacity-50 transition-all">Capturar Rosto</button>
           <button onClick={onClose} className="w-full py-3 bg-gray-600 rounded-full font-bold">Cancelar</button>
         </div>
       </div>
