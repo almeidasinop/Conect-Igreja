@@ -74,3 +74,29 @@
   filter: brightness(1.1);
   transform: translateY(-1px);
 }
+
+::-webkit-scrollbar {
+  width: 8px; /* Largura da barra de rolagem */
+  height: 8px; /* Altura (para rolagem horizontal) */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* Fundo da calha transparente */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #52525b; /* Cor da barra (cinza escuro) */
+  border-radius: 10px; /* Cantos arredondados */
+  border: 2px solid transparent; /* Adiciona um preenchimento interno */
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #71717a; /* Cor da barra ao passar o rato */
+}
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin; /* Barra de rolagem fina */
+  scrollbar-color: #52525b transparent; /* Cor da barra e da calha */
+}

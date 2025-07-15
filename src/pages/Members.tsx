@@ -1,34 +1,42 @@
-import { useState } from "react";
-import { Plus, Search, Filter, Users } from "lucide-react";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MemberForm } from "@/components/MemberForm";
 import { MembersList } from "@/components/MembersList";
 import { GroupsManagement } from "@/components/GroupsManagement";
+import MembershipReports from "@/components/MembershipReports";
 
 const Members = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<any | null>(null);
-  // CORREÇÃO: Adicionado um estado de 'key' para forçar o formulário a recarregar
   const [formKey, setFormKey] = useState(Date.now());
+  
+  const queryClient = useQueryClient();
 
   const handleEditMember = (member: any) => {
     setEditingMember(member);
-    setFormKey(Date.now()); // Muda a key para um novo valor único
+    setFormKey(Date.now());
     setShowMemberForm(true);
   };
   
   const handleNewMember = () => {
     setEditingMember(null);
-    setFormKey(Date.now()); // Muda a key para forçar a recriação com estado limpo
+    setFormKey(Date.now());
     setShowMemberForm(true);
   }
 
   const closeForm = () => {
     setShowMemberForm(false);
+  }
+
+  const handleSave = () => {
+    // Invalida as queries para forçar a atualização dos dados
+    queryClient.invalidateQueries({ queryKey: ['membersWithProfiles'] });
+    queryClient.invalidateQueries({ queryKey: ['membershipReport'] });
+    closeForm();
   }
 
   return (
@@ -67,22 +75,8 @@ const Members = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                    <Input
-                      placeholder="Buscar membros..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <Filter size={16} className="mr-2" />
-                    Filtros
-                  </Button>
-                </div>
-                <MembersList searchTerm={searchTerm} onEdit={handleEditMember} />
+                {/* A barra de busca agora está dentro do componente DataTable, então a removemos daqui. */}
+                <MembersList onEdit={handleEditMember} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -92,27 +86,16 @@ const Members = () => {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatórios de Membresia</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade de relatórios em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
+            <MembershipReports />
           </TabsContent>
         </Tabs>
 
         {showMemberForm && (
           <MemberForm
-            key={formKey} // CORREÇÃO: A 'key' é passada para o formulário
+            key={formKey}
             member={editingMember}
             onClose={closeForm}
-            onSave={() => {
-              closeForm();
-            }}
+            onSave={handleSave}
           />
         )}
     </div>

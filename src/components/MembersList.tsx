@@ -1,219 +1,60 @@
-import { useEffect, useState, useCallback } from "react";
-import { Edit, Trash2, Phone, Mail, MapPin, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Skeleton } from "@/components/ui/skeleton";
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { DataTable } from '@/components/DataTable'; 
+import { columns, type MemberWithProfile } from '@/components/MembersColumns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface MembersListProps {
-  searchTerm: string;
-  onEdit: (member: any) => void;
+  onEdit: (member: MemberWithProfile) => void;
 }
 
-export const MembersList = ({ searchTerm, onEdit }: MembersListProps) => {
-  const { toast } = useToast();
-  const [members, setMembers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchMembers = useCallback(async () => {
-    setLoading(true);
-    try {
+export const MembersList: React.FC<MembersListProps> = ({ onEdit }) => {
+  const { data: members, isLoading, isError } = useQuery<MemberWithProfile[]>({
+    queryKey: ['membersWithProfiles'],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from("members")
-        .select(`
-          id,
-          member_number,
-          status,
-          conversion_date,
-          baptism_date,
-          profiles (*)
-        `)
-        .order("created_at", { ascending: false });
+        .from('members')
+        .select('*, profiles(*)');
+      
+      if (error) {
+        console.error("Erro ao buscar membros:", error);
+        throw new Error(error.message);
+      }
 
-      if (error) throw error;
+      // CORREÇÃO: "Achata" os dados para facilitar o uso na tabela.
+      // Copia os dados do perfil para o nível principal de cada membro.
+      const flattenedData = (data || []).map(member => ({
+          ...member,
+          full_name: member.profiles?.full_name,
+          email: member.profiles?.email,
+          phone: member.profiles?.phone,
+      }));
 
-      setMembers(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar membros: " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+      return flattenedData;
+    },
+  });
 
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
-  
-  const filteredMembers = members.filter(member =>
-    member.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.member_number?.includes(searchTerm)
-  );
-
-  const deleteMember = async (memberId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este membro?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("members")
-        .delete()
-        .eq("id", memberId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Membro excluído com sucesso!",
-      });
-
-      fetchMembers();
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir membro: " + error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: { [key: string]: "default" | "secondary" | "destructive" } = {
-      active: "default",
-      inactive: "secondary",
-      transferred: "destructive"
-    };
-    
-    const labels: { [key: string]: string } = {
-      active: "Ativo",
-      inactive: "Inativo",
-      transferred: "Transferido"
-    };
-
+  if (isLoading) {
     return (
-      <Badge variant={variants[status] || "default"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-3 w-1/3" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
     );
   }
 
-  if (filteredMembers.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">
-            {searchTerm ? "Nenhum membro encontrado para sua busca." : "Nenhum membro cadastrado ainda."}
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (isError) {
+    return <p className="text-red-500">Erro ao carregar a lista de membros.</p>;
   }
 
   return (
-    <div className="space-y-4">
-      {filteredMembers.map((member) => (
-        <Card key={member.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 flex-1">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={member.profiles?.avatar_url} />
-                  <AvatarFallback>
-                    {member.profiles?.full_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <h3 className="font-semibold text-foreground">
-                      {member.profiles?.full_name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      #{member.member_number || "Sem número"}
-                    </p>
-                    {getStatusBadge(member.status)}
-                  </div>
-
-                  <div className="space-y-1">
-                    {member.profiles?.email && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Mail size={14} className="mr-2" />
-                        {member.profiles.email}
-                      </div>
-                    )}
-                    {member.profiles?.phone && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Phone size={14} className="mr-2" />
-                        {member.profiles.phone}
-                      </div>
-                    )}
-                    {member.profiles?.city && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin size={14} className="mr-2" />
-                        {member.profiles.city}, {member.profiles.state}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    {member.conversion_date && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar size={14} className="mr-2" />
-                        Conversão: {new Date(member.conversion_date).toLocaleDateString()}
-                      </div>
-                    )}
-                    {member.baptism_date && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar size={14} className="mr-2" />
-                        Batismo: {new Date(member.baptism_date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={() => onEdit(member)}>
-                  <Edit size={16} />
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => deleteMember(member.id)}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <DataTable
+      columns={columns({ onEdit })}
+      data={members || []}
+      filterColumnId="full_name"
+      filterPlaceholder="Buscar por nome..."
+    />
   );
 };

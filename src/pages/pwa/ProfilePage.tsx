@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Church, MapPin, PhoneCall, SmilePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast'; // Importa o hook para notificações
+import { useToast } from '@/hooks/use-toast';
 
 // Declara a variável global da face-api
 declare const faceapi: any;
@@ -111,7 +111,6 @@ const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void
           isFaceDetected ? "border-emerald-500 animate-pulse" : "border-gray-600"
         )}>
           <video ref={videoRef} autoPlay muted onPlay={handleVideoOnPlay} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-          {/* CORREÇÃO: Adicionado o espelhamento no canvas para alinhar com o vídeo */}
           <canvas ref={canvasRef} className="absolute top-0 left-0" style={{ transform: 'scaleX(-1)' }}/>
         </div>
         <p className="text-white my-4 h-6">{status}</p>
@@ -139,51 +138,52 @@ const FormSection = React.memo(({ title, icon, children }: { title: string, icon
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast(); // Inicializa o hook de notificações
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isFacialModalOpen, setFacialModalOpen] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  
+  // CORREÇÃO: Estados separados para cada tabela para evitar problemas de atualização.
+  const [profileData, setProfileData] = useState<any>({});
+  const [memberData, setMemberData] = useState<any>({});
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
     const fetchUserData = async () => {
-      if (!user?.id) {
-        setFormData({});
-        if(isMounted) setLoading(false);
-        return;
-      }
       setLoading(true);
-      try {
+      if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profile && isMounted) {
+        if (profile) {
           const { data: member } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
-          setFormData({ ...profile, ...member });
-        } else if (isMounted) {
-            setFormData({ email: user.email });
+          setProfileData(profile);
+          setMemberData(member || {});
+        } else {
+          setProfileData({ email: user.email });
+          setMemberData({});
         }
-      } catch (error) {
-        console.error("Erro ao buscar dados do perfil:", error);
-      } finally {
-        if (isMounted) setLoading(false);
+      } else {
+        setProfileData({});
+        setMemberData({});
       }
+      setLoading(false);
     };
     fetchUserData();
-    return () => { isMounted = false; };
-  }, [user?.id]);
+  }, [user]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  const handleProfileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setProfileData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+  }, []);
+
+  const handleMemberChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
+    setMemberData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
   }, []);
   
   const handleSelectChange = useCallback((name: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    setMemberData((prev: any) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleFacialCaptureSuccess = useCallback((descriptor: number[]) => {
-    setFormData((prev: any) => ({ ...prev, face_descriptor: descriptor }));
+    setProfileData((prev: any) => ({ ...prev, face_descriptor: descriptor }));
     setFacialModalOpen(false);
-    // Substitui o alert() por uma notificação (toast)
     toast({
       title: "Rosto Capturado!",
       description: "Não se esqueça de salvar as alterações para confirmar.",
@@ -192,9 +192,7 @@ const ProfilePage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { full_name, email, password } = formData;
-
-    if (!full_name || !email) {
+    if (!profileData.full_name || !profileData.email) {
       toast({ title: "Campos Obrigatórios", description: "Nome completo e email são necessários.", variant: "destructive" });
       return;
     }
@@ -206,35 +204,26 @@ const ProfilePage: React.FC = () => {
 
     try {
       let userId = user?.id;
+      let finalProfileData = { ...profileData };
+
       if (!user) {
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email: profileData.email, password });
         if (signUpError) throw signUpError;
         if (!authData.user) throw new Error("Cadastro falhou, usuário não criado.");
         userId = authData.user.id;
+        finalProfileData.id = userId; // Adiciona o ID ao payload do perfil
       }
 
-      const profilePayload = {
-        id: userId, full_name: formData.full_name, email: formData.email, phone: formData.phone,
-        birth_date: formData.birth_date, address: formData.address, city: formData.city,
-        state: formData.state, zip_code: formData.zip_code, face_descriptor: formData.face_descriptor,
-      };
-      
-      const memberPayload = {
-        profile_id: userId, marital_status: formData.marital_status, profession: formData.profession,
-        conversion_date: formData.conversion_date, baptism_date: formData.baptism_date,
-        origin_church: formData.origin_church, emergency_contact_name: formData.emergency_contact_name,
-        emergency_contact_phone: formData.emergency_contact_phone,
-      };
-
-      const { error: profileError } = await supabase.from('profiles').upsert(profilePayload);
+      const { error: profileError } = await supabase.from('profiles').upsert(finalProfileData);
       if (profileError) throw profileError;
 
+      const memberPayload = { ...memberData, profile_id: userId };
       const { error: memberError } = await supabase.from('members').upsert(memberPayload, { onConflict: 'profile_id' });
       if (memberError) throw memberError;
 
       toast({
         title: "Sucesso!",
-        description: user ? 'Seu perfil foi salvo com sucesso.' : 'Cadastro realizado com sucesso! Verifique seu email para confirmar a conta.',
+        description: user ? 'Seu perfil foi salvo com sucesso.' : 'Cadastro realizado com sucesso! Verifique seu email.',
       });
       
     } catch (error: any) {
@@ -257,41 +246,41 @@ const ProfilePage: React.FC = () => {
       <main>
         <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto p-4 pb-24">
           <FormSection title="Informações Pessoais" icon={<User size={20}/>}>
-            <div><Label>Nome Completo *</Label><Input name="full_name" value={formData.full_name || ''} onChange={handleChange} required /></div>
-            <div><Label>Email *</Label><Input name="email" type="email" value={formData.email || ''} onChange={handleChange} disabled={!!user} required /></div>
-            {!user && ( <div><Label>Senha *</Label><Input name="password" type="password" value={formData.password || ''} onChange={handleChange} required /></div> )}
-            <div><Label>Telefone</Label><Input name="phone" type="tel" value={formData.phone || ''} onChange={handleChange} /></div>
-            <div><Label>Data de Nascimento</Label><Input name="birth_date" type="date" value={formData.birth_date || ''} onChange={handleChange} /></div>
+            <div><Label>Nome Completo *</Label><Input name="full_name" value={profileData.full_name || ''} onChange={handleProfileChange} required /></div>
+            <div><Label>Email *</Label><Input name="email" type="email" value={profileData.email || ''} onChange={handleProfileChange} disabled={!!user} required /></div>
+            {!user && ( <div><Label>Senha *</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div> )}
+            <div><Label>Telefone</Label><Input name="phone" type="tel" value={profileData.phone || ''} onChange={handleProfileChange} /></div>
+            <div><Label>Data de Nascimento</Label><Input name="birth_date" type="date" value={profileData.birth_date || ''} onChange={handleProfileChange} /></div>
             <div><Label>Estado Civil</Label>
-              <Select value={formData.marital_status || ''} onValueChange={(v) => handleSelectChange('marital_status', v)}>
+              <Select value={memberData.marital_status || ''} onValueChange={(v) => handleSelectChange('marital_status', v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione..."/></SelectTrigger>
                 <SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label>Profissão</Label><Input name="profession" value={formData.profession || ''} onChange={handleChange} /></div>
+            <div><Label>Profissão</Label><Input name="profession" value={memberData.profession || ''} onChange={handleMemberChange} /></div>
           </FormSection>
 
           <FormSection title="Informações Eclesiásticas" icon={<Church size={20}/>}>
-            <div><Label>Data de Conversão</Label><Input name="conversion_date" type="date" value={formData.conversion_date || ''} onChange={handleChange} /></div>
-            <div><Label>Data do Batismo</Label><Input name="baptism_date" type="date" value={formData.baptism_date || ''} onChange={handleChange} /></div>
-            <div><Label>Igreja de Origem</Label><Input name="origin_church" value={formData.origin_church || ''} onChange={handleChange} /></div>
+            <div><Label>Data de Conversão</Label><Input name="conversion_date" type="date" value={memberData.conversion_date || ''} onChange={handleMemberChange} /></div>
+            <div><Label>Data do Batismo</Label><Input name="baptism_date" type="date" value={memberData.baptism_date || ''} onChange={handleMemberChange} /></div>
+            <div><Label>Igreja de Origem</Label><Input name="origin_church" value={memberData.origin_church || ''} onChange={handleMemberChange} /></div>
           </FormSection>
           
           <FormSection title="Endereço" icon={<MapPin size={20}/>}>
-            <div><Label>Endereço</Label><Input name="address" value={formData.address || ''} onChange={handleChange} /></div>
-            <div><Label>Cidade</Label><Input name="city" value={formData.city || ''} onChange={handleChange} /></div>
-            <div><Label>Estado</Label><Input name="state" value={formData.state || ''} onChange={handleChange} /></div>
-            <div><Label>CEP</Label><Input name="zip_code" value={formData.zip_code || ''} onChange={handleChange} /></div>
+            <div><Label>Endereço</Label><Input name="address" value={profileData.address || ''} onChange={handleProfileChange} /></div>
+            <div><Label>Cidade</Label><Input name="city" value={profileData.city || ''} onChange={handleProfileChange} /></div>
+            <div><Label>Estado</Label><Input name="state" value={profileData.state || ''} onChange={handleProfileChange} /></div>
+            <div><Label>CEP</Label><Input name="zip_code" value={profileData.zip_code || ''} onChange={handleProfileChange} /></div>
           </FormSection>
 
           <FormSection title="Contato de Emergência" icon={<PhoneCall size={20}/>}>
-            <div><Label>Nome</Label><Input name="emergency_contact_name" value={formData.emergency_contact_name || ''} onChange={handleChange} /></div>
-            <div><Label>Telefone</Label><Input name="emergency_contact_phone" type="tel" value={formData.emergency_contact_phone || ''} onChange={handleChange} /></div>
+            <div><Label>Nome</Label><Input name="emergency_contact_name" value={memberData.emergency_contact_name || ''} onChange={handleMemberChange} /></div>
+            <div><Label>Telefone</Label><Input name="emergency_contact_phone" type="tel" value={memberData.emergency_contact_phone || ''} onChange={handleMemberChange} /></div>
           </FormSection>
 
           <FormSection title="Reconhecimento Facial" icon={<SmilePlus size={20}/>}>
             <div className="text-center">
-              {formData?.face_descriptor ? (
+              {profileData?.face_descriptor ? (
                 <div className="text-emerald-400 font-bold">
                   <p>✅ Rosto já cadastrado.</p>
                   <button type="button" onClick={() => setFacialModalOpen(true)} className="text-sm text-blue-400 mt-1 hover:underline">Cadastrar novamente</button>
