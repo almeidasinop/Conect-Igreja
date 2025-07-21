@@ -82,7 +82,7 @@ export const AppShell = () => {
             </main>
 
             {/* Barra de Navegação Inferior */}
-            <footer className="sticky bottom-0 left-0 right-0 bg-neutral-900 border-t border-neutral-800">
+            <footer className="sticky bottom-0 left-0 right-0 bg-neutral-900 border-t border-neutral-800 z-30">
                 <nav className="flex justify-around items-center h-16">
                     {navItems.map(({ href, label, icon: Icon }) => (
                         <NavLink

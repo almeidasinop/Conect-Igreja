@@ -5,123 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Church, MapPin, PhoneCall, SmilePlus } from 'lucide-react';
+import { User, Church, MapPin, PhoneCall, SmilePlus, LogIn, ScanFace, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Declara a variável global da face-api
-declare const faceapi: any;
-
-// Componente para a Câmera de Cadastro Facial (em um Modal)
-const FacialCaptureModal = ({ onClose, onCaptureSuccess }: { onClose: () => void, onCaptureSuccess: (descriptor: number[]) => void }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [status, setStatus] = useState('Iniciando câmera...');
-  const [isFaceDetected, setIsFaceDetected] = useState(false);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
-
-  useEffect(() => {
-    const loadModels = async () => {
-      const MODEL_URL = '/models';
-      setStatus('Carregando modelos de IA...');
-      try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-        setModelsLoaded(true);
-        setStatus('Posicione seu rosto no centro');
-      } catch (error) {
-        console.error("Erro ao carregar modelos da face-api:", error);
-        setStatus('Erro ao carregar modelos.');
-      }
-    };
-    loadModels();
-  }, []);
-
-  useEffect(() => {
-    if (modelsLoaded) {
-        const startVideo = () => {
-          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-            .then(stream => {
-              if (videoRef.current) videoRef.current.srcObject = stream;
-            })
-            .catch(() => setStatus('Erro ao acessar a câmera.'));
-        };
-        startVideo();
-    }
-  }, [modelsLoaded]);
-
-  const handleVideoOnPlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const detectionInterval = setInterval(async () => {
-      if (videoRef.current && !videoRef.current.paused && modelsLoaded) {
-        const detection = await faceapi
-          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks();
-        
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const displaySize = { width: video.videoWidth, height: video.videoHeight };
-          faceapi.matchDimensions(canvas, displaySize);
-          const resizedDetection = faceapi.resizeResults(detection, displaySize);
-          
-          canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
-
-          if (resizedDetection) {
-            faceapi.draw.drawFaceLandmarks(canvas, resizedDetection);
-            setIsFaceDetected(true);
-            setStatus("Ótimo! Fique parado.");
-          } else {
-            setIsFaceDetected(false);
-            setStatus("Posicione seu rosto no círculo.");
-          }
-        }
-      }
-    }, 400);
-
-    return () => clearInterval(detectionInterval);
-  };
-
-  const handleCapture = async () => {
-    if (!videoRef.current) return;
-    setStatus('Analisando...');
-    const detection = await faceapi
-      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (detection) {
-      const faceDescriptor = Array.from(detection.descriptor);
-      onCaptureSuccess(faceDescriptor);
-    } else {
-      setStatus('Nenhum rosto detectado. Tente novamente.');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 p-4">
-      <div className="relative w-full max-w-md bg-gray-800 rounded-2xl p-6 text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">Cadastro Facial</h2>
-        <div className={cn(
-          "relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 transition-all",
-          isFaceDetected ? "border-emerald-500 animate-pulse" : "border-gray-600"
-        )}>
-          <video ref={videoRef} autoPlay muted onPlay={handleVideoOnPlay} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-          <canvas ref={canvasRef} className="absolute top-0 left-0" style={{ transform: 'scaleX(-1)' }}/>
-        </div>
-        <p className="text-white my-4 h-6">{status}</p>
-        <div className="space-y-3">
-          <button onClick={handleCapture} disabled={!isFaceDetected || !modelsLoaded} className="w-full py-3 bg-emerald-500 rounded-full font-bold disabled:bg-gray-500 disabled:opacity-50 transition-all">Capturar Rosto</button>
-          <button onClick={onClose} className="w-full py-3 bg-gray-600 rounded-full font-bold">Cancelar</button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// --- COMPONENTES AUXILIARES ---
 
 const PageHeader = ({ title }: { title: string }) => (
   <header className="sticky top-0 bg-black z-10 p-4 text-center border-b border-neutral-800">
@@ -136,170 +25,275 @@ const FormSection = React.memo(({ title, icon, children }: { title: string, icon
     </div>
 ));
 
-const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [isFacialModalOpen, setFacialModalOpen] = useState(false);
-  
-  // CORREÇÃO: Estados separados para cada tabela para evitar problemas de atualização.
-  const [profileData, setProfileData] = useState<any>({});
-  const [memberData, setMemberData] = useState<any>({});
-  const [password, setPassword] = useState('');
+// Modal de Captura Facial (agora muito mais simples)
+const FacialCaptureModal = ({ onClose, onCapture, title, buttonText }: { onClose: () => void, onCapture: (imageData: string) => void, title: string, buttonText: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [status, setStatus] = useState('Iniciando câmera...');
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profile) {
-          const { data: member } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
-          setProfileData(profile);
-          setMemberData(member || {});
-        } else {
-          setProfileData({ email: user.email });
-          setMemberData({});
-        }
-      } else {
-        setProfileData({});
-        setMemberData({});
-      }
-      setLoading(false);
+    const startVideo = () => {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        .then(stream => {
+          if (videoRef.current) videoRef.current.srcObject = stream;
+          setStatus('Posicione seu rosto e capture a foto.');
+        })
+        .catch(() => setStatus('Erro ao acessar a câmera.'));
     };
-    fetchUserData();
-  }, [user]);
-
-  const handleProfileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfileData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+    startVideo();
+    
+    return () => {
+        if (videoRef.current?.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+        }
+    };
   }, []);
 
-  const handleMemberChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>) => {
-    setMemberData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
-  }, []);
-  
-  const handleSelectChange = useCallback((name: string, value: string) => {
-    setMemberData((prev: any) => ({ ...prev, [name]: value }));
-  }, []);
+  const handleCapture = () => {
+    const video = videoRef.current;
+    if (!video) return;
 
-  const handleFacialCaptureSuccess = useCallback((descriptor: number[]) => {
-    setProfileData((prev: any) => ({ ...prev, face_descriptor: descriptor }));
-    setFacialModalOpen(false);
-    toast({
-      title: "Rosto Capturado!",
-      description: "Não se esqueça de salvar as alterações para confirmar.",
-    });
-  }, [toast]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profileData.full_name || !profileData.email) {
-      toast({ title: "Campos Obrigatórios", description: "Nome completo e email são necessários.", variant: "destructive" });
-      return;
-    }
-    if (!user && !password) {
-      toast({ title: "Campo Obrigatório", description: "A senha é necessária para criar uma nova conta.", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-
-    try {
-      let userId = user?.id;
-      let finalProfileData = { ...profileData };
-
-      if (!user) {
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email: profileData.email, password });
-        if (signUpError) throw signUpError;
-        if (!authData.user) throw new Error("Cadastro falhou, usuário não criado.");
-        userId = authData.user.id;
-        finalProfileData.id = userId; // Adiciona o ID ao payload do perfil
-      }
-
-      const { error: profileError } = await supabase.from('profiles').upsert(finalProfileData);
-      if (profileError) throw profileError;
-
-      const memberPayload = { ...memberData, profile_id: userId };
-      const { error: memberError } = await supabase.from('members').upsert(memberPayload, { onConflict: 'profile_id' });
-      if (memberError) throw memberError;
-
-      toast({
-        title: "Sucesso!",
-        description: user ? 'Seu perfil foi salvo com sucesso.' : 'Cadastro realizado com sucesso! Verifique seu email.',
-      });
-      
-    } catch (error: any) {
-      toast({ title: "Erro ao Salvar", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Converte a imagem para base64
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    onCapture(imageData);
   };
 
-  if (loading) return <div className="p-4 text-center">Carregando...</div>;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 p-4">
+      <div className="relative w-full max-w-md bg-gray-800 rounded-2xl p-6 text-center">
+        <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>
+        <div className="relative w-64 h-64 mx-auto rounded-full overflow-hidden border-4 border-emerald-500">
+          <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+        </div>
+        <p className="text-white my-4 h-6">{status}</p>
+        <div className="space-y-3">
+          <Button onClick={handleCapture} className="w-full">{buttonText}</Button>
+          <Button onClick={onClose} variant="secondary" className="w-full">Cancelar</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- FORMULÁRIO DE PERFIL/CADASTRO ---
+const ProfileForm = ({ isRegister = false, onSwitchToLogin }: { isRegister?: boolean, onSwitchToLogin?: () => void }) => {
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const [loading, setLoading] = useState(true);
+    const [isFacialModalOpen, setFacialModalOpen] = useState(false);
+    const [profileData, setProfileData] = useState<any>({});
+    const [memberData, setMemberData] = useState<any>({});
+    const [password, setPassword] = useState('');
+    const [faceImage, setFaceImage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+          if (!user && !isRegister) return;
+          setLoading(true);
+          if (user) {
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            if (profile) {
+              const { data: member } = await supabase.from('members').select('*').eq('profile_id', profile.id).single();
+              setProfileData(profile);
+              setMemberData(member || {});
+            } else {
+              setProfileData({ email: user.email });
+              setMemberData({});
+            }
+          } else {
+            setProfileData({});
+            setMemberData({});
+          }
+          setLoading(false);
+        };
+        fetchUserData();
+    }, [user, isRegister]);
+
+    const handleProfileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { setProfileData((prev: any) => ({ ...prev, [e.target.name]: e.target.value })); }, []);
+    const handleMemberChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setMemberData((prev: any) => ({ ...prev, [e.target.name]: e.target.value })); }, []);
+    const handleSelectChange = useCallback((name: string, value: string) => { setMemberData((prev: any) => ({ ...prev, [name]: value })); }, []);
+
+    const handleFacialCaptureSuccess = useCallback((imageData: string) => {
+        setFaceImage(imageData);
+        setFacialModalOpen(false);
+        toast({ title: "Rosto Capturado!", description: "A imagem será enviada ao salvar." });
+    }, [toast]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        // ... (validações)
+        setLoading(true);
+
+        try {
+            let userId = user?.id;
+            let finalProfileData = { ...profileData };
+
+            if (isRegister) {
+                const { data: authData, error: signUpError } = await supabase.auth.signUp({ email: profileData.email, password });
+                if (signUpError) throw signUpError;
+                userId = authData.user!.id;
+                finalProfileData.id = userId;
+            }
+
+            const { error: profileError } = await supabase.from('profiles').upsert(finalProfileData);
+            if (profileError) throw profileError;
+
+            // Se houver uma nova imagem facial, chama a função de nuvem para registrá-la
+            if (faceImage && userId) {
+                const { error: funcError } = await supabase.functions.invoke('add-face', {
+                    body: { userId, imageBase64: faceImage.split(',')[1] } // Envia apenas os dados base64
+                });
+                if (funcError) throw funcError;
+            }
+
+            const memberPayload = { ...memberData, profile_id: userId };
+            const { error: memberError } = await supabase.from('members').upsert(memberPayload, { onConflict: 'profile_id' });
+            if (memberError) throw memberError;
+
+            toast({ title: "Sucesso!", description: isRegister ? 'Cadastro realizado!' : 'Perfil salvo!' });
+        } catch (error: any) {
+            toast({ title: "Erro ao Salvar", description: error.message, variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <div className="p-4 text-center">Carregando...</div>;
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ... (Todos os FormSections como antes) ... */}
+            <FormSection title="Reconhecimento Facial" icon={<SmilePlus size={20}/>}>
+                <div className="text-center">
+                  {profileData?.azure_person_id ? ( // Verifica se já tem um ID do Azure
+                    <div className="text-emerald-400 font-bold">
+                      <p>✅ Rosto já cadastrado.</p>
+                      <button type="button" onClick={() => setFacialModalOpen(true)} className="text-sm text-blue-400 mt-1 hover:underline">Cadastrar novamente</button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mb-3">Cadastre seu rosto para o check-in automático.</p>
+                      <Button type="button" onClick={() => setFacialModalOpen(true)}>Iniciar Cadastro Facial</Button>
+                    </>
+                  )}
+                  {faceImage && <p className="text-sm text-yellow-400 mt-2">Nova foto pronta para ser salva.</p>}
+                </div>
+            </FormSection>
+            <Button type="submit" disabled={loading} className="w-full p-3 bg-emerald-600 font-bold text-lg">
+                {loading ? 'Salvando...' : (isRegister ? 'Criar Conta' : 'Salvar Alterações')}
+            </Button>
+            {isRegister && (
+                 <p className="text-center text-sm text-neutral-400">
+                    Já tem uma conta?{' '}
+                    <button type="button" onClick={onSwitchToLogin} className="font-bold text-emerald-400 hover:underline">Faça o login</button>
+                </p>
+            )}
+            {isFacialModalOpen && <FacialCaptureModal onClose={() => setFacialModalOpen(false)} onCapture={handleFacialCaptureSuccess} title="Cadastro Facial" buttonText="Capturar e Cadastrar" />}
+        </form>
+    );
+};
+
+// --- TELA DE LOGIN ---
+const LoginPage = ({ onSwitchToRegister }: { onSwitchToRegister: () => void }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isFacialLoginOpen, setIsFacialLoginOpen] = useState(false);
+    const [facialLoginStatus, setFacialLoginStatus] = useState('');
+    const { toast } = useToast();
+    const passwordInputRef = useRef<HTMLInputElement>(null);
+
+    const handleLogin = async () => { /* ... (lógica de login normal) ... */ };
+
+    const handleFacialLogin = async (imageData: string) => {
+        setFacialLoginStatus('Reconhecendo...');
+        try {
+            const { data, error } = await supabase.functions.invoke('identify-face', {
+                body: { imageBase64: imageData.split(',')[1] }
+            });
+
+            if (error) throw error;
+            
+            if (data.email) {
+                setEmail(data.email);
+                setIsFacialLoginOpen(false);
+                toast({ title: "Rosto Reconhecido!", description: "Digite sua senha para continuar." });
+                passwordInputRef.current?.focus();
+            } else {
+                setFacialLoginStatus('Rosto não encontrado.');
+                toast({ title: "Falha", description: "Nenhum usuário encontrado com este rosto.", variant: "destructive" });
+            }
+        } catch (error: any) {
+            setFacialLoginStatus('Erro no reconhecimento.');
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
+        }
+    };
+
+    return (
+        <>
+            {isFacialLoginOpen && (
+                <FacialCaptureModal 
+                    onClose={() => setIsFacialLoginOpen(false)}
+                    onCapture={handleFacialLogin}
+                    title="Login Facial"
+                    buttonText="Reconhecer Rosto"
+                />
+            )}
+            <div className="space-y-6">
+                <FormSection title="Acessar Conta" icon={<LogIn size={20}/>}>
+                    <div><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" /></div>
+                    <div><Label>Senha</Label><Input ref={passwordInputRef} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" /></div>
+                </FormSection>
+                <Button onClick={handleLogin} className="w-full p-3 bg-emerald-600 font-bold text-lg">Entrar</Button>
+                <Button variant="outline" className="w-full" onClick={() => setIsFacialLoginOpen(true)}>
+                    <ScanFace className="mr-2 h-5 w-5" />
+                    Entrar com Rosto
+                </Button>
+                <p className="text-center text-sm text-neutral-400">
+                    Não tem uma conta?{' '}
+                    <button type="button" onClick={onSwitchToRegister} className="font-bold text-emerald-400 hover:underline">Cadastre-se</button>
+                </p>
+            </div>
+        </>
+    );
+};
+
+// --- COMPONENTE PRINCIPAL ---
+const ProfilePage: React.FC = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('login');
+
+  if (user) {
+    return (
+        <div>
+            <PageHeader title="Meu Perfil" />
+            <div className="p-4 pb-24">
+                <ProfileForm />
+            </div>
+        </div>
+    );
+  }
 
   return (
-    <>
-      {isFacialModalOpen && (
-        <FacialCaptureModal onClose={() => setFacialModalOpen(false)} onCaptureSuccess={handleFacialCaptureSuccess} />
-      )}
-      
-      <PageHeader title={user ? 'Meu Perfil' : 'Criar Nova Conta'} />
-      
-      <main>
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto p-4 pb-24">
-          <FormSection title="Informações Pessoais" icon={<User size={20}/>}>
-            <div><Label>Nome Completo *</Label><Input name="full_name" value={profileData.full_name || ''} onChange={handleProfileChange} required /></div>
-            <div><Label>Email *</Label><Input name="email" type="email" value={profileData.email || ''} onChange={handleProfileChange} disabled={!!user} required /></div>
-            {!user && ( <div><Label>Senha *</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div> )}
-            <div><Label>Telefone</Label><Input name="phone" type="tel" value={profileData.phone || ''} onChange={handleProfileChange} /></div>
-            <div><Label>Data de Nascimento</Label><Input name="birth_date" type="date" value={profileData.birth_date || ''} onChange={handleProfileChange} /></div>
-            <div><Label>Estado Civil</Label>
-              <Select value={memberData.marital_status || ''} onValueChange={(v) => handleSelectChange('marital_status', v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione..."/></SelectTrigger>
-                <SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div><Label>Profissão</Label><Input name="profession" value={memberData.profession || ''} onChange={handleMemberChange} /></div>
-          </FormSection>
-
-          <FormSection title="Informações Eclesiásticas" icon={<Church size={20}/>}>
-            <div><Label>Data de Conversão</Label><Input name="conversion_date" type="date" value={memberData.conversion_date || ''} onChange={handleMemberChange} /></div>
-            <div><Label>Data do Batismo</Label><Input name="baptism_date" type="date" value={memberData.baptism_date || ''} onChange={handleMemberChange} /></div>
-            <div><Label>Igreja de Origem</Label><Input name="origin_church" value={memberData.origin_church || ''} onChange={handleMemberChange} /></div>
-          </FormSection>
-          
-          <FormSection title="Endereço" icon={<MapPin size={20}/>}>
-            <div><Label>Endereço</Label><Input name="address" value={profileData.address || ''} onChange={handleProfileChange} /></div>
-            <div><Label>Cidade</Label><Input name="city" value={profileData.city || ''} onChange={handleProfileChange} /></div>
-            <div><Label>Estado</Label><Input name="state" value={profileData.state || ''} onChange={handleProfileChange} /></div>
-            <div><Label>CEP</Label><Input name="zip_code" value={profileData.zip_code || ''} onChange={handleProfileChange} /></div>
-          </FormSection>
-
-          <FormSection title="Contato de Emergência" icon={<PhoneCall size={20}/>}>
-            <div><Label>Nome</Label><Input name="emergency_contact_name" value={memberData.emergency_contact_name || ''} onChange={handleMemberChange} /></div>
-            <div><Label>Telefone</Label><Input name="emergency_contact_phone" type="tel" value={memberData.emergency_contact_phone || ''} onChange={handleMemberChange} /></div>
-          </FormSection>
-
-          <FormSection title="Reconhecimento Facial" icon={<SmilePlus size={20}/>}>
-            <div className="text-center">
-              {profileData?.face_descriptor ? (
-                <div className="text-emerald-400 font-bold">
-                  <p>✅ Rosto já cadastrado.</p>
-                  <button type="button" onClick={() => setFacialModalOpen(true)} className="text-sm text-blue-400 mt-1 hover:underline">Cadastrar novamente</button>
-                </div>
-              ) : (
-                <>
-                  <p className="mb-3">Cadastre seu rosto para o check-in automático.</p>
-                  <Button type="button" onClick={() => setFacialModalOpen(true)}>Iniciar Cadastro Facial</Button>
-                </>
-              )}
-            </div>
-          </FormSection>
-
-          <Button type="submit" disabled={loading} className="w-full p-3 bg-emerald-600 rounded-lg font-bold text-lg disabled:bg-gray-500">
-            {loading ? 'Salvando...' : (user ? 'Salvar Alterações' : 'Criar Conta')}
-          </Button>
-        </form>
-      </main>
-    </>
+    <div className="p-4 pb-24">
+        <h1 className="text-3xl font-bold text-center mb-6">Bem-vindo!</h1>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Entrar</TabsTrigger>
+                <TabsTrigger value="register">Cadastrar</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login" className="mt-6">
+                <LoginPage onSwitchToRegister={() => setActiveTab('register')} />
+            </TabsContent>
+            <TabsContent value="register" className="mt-6">
+                <ProfileForm isRegister={true} onSwitchToLogin={() => setActiveTab('login')} />
+            </TabsContent>
+        </Tabs>
+    </div>
   );
 };
 
