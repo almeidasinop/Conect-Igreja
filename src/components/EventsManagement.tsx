@@ -11,14 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { type Event, type EventRole, type Database } from '@/integrations/supabase/types';
+import { type Database } from '@/integrations/supabase/types';
 import { useToast } from '@/components/ui/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, PlusCircle, Users, Globe, Lock } from 'lucide-react';
 
-// Helper Type for Groups
+// Helper Types from Database
 type Group = Database['public']['Tables']['groups']['Row'];
+type Event = Database['public']['Tables']['events']['Row'];
+type EventRole = Database['public']['Tables']['event_roles']['Row'];
 
 const fromSupabaseDateTime = (isoDateTime: string | null | undefined) => {
   if (!isoDateTime) return '';

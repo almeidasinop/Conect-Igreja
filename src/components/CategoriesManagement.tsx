@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "./ui/skeleton";
 
 type Category = {
-  id: string;
+  id: number;
   name: string;
   description: string | null;
   type: 'income' | 'expense';
@@ -101,7 +101,7 @@ export const CategoriesManagement = () => {
     }
   };
   
-  const handleDelete = async (categoryId: string) => {
+  const handleDelete = async (categoryId: number) => {
     if (!confirm("Tem a certeza de que deseja apagar esta categoria?")) return;
     
     try {
